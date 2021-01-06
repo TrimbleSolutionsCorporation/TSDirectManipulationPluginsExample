@@ -146,7 +146,11 @@
                 Profile = { ProfileString = this.profile },
                 Finish = "PAINT"
             };
-
+                        
+            myBeam.Class="2";
+            myBeam.Material="Steel_Undefined";
+            myBeam.Name="MyBeam";
+            
             myBeam.Insert();
         }
     }
