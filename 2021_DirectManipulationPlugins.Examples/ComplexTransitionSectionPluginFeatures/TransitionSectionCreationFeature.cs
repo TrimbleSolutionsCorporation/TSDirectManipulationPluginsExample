@@ -151,10 +151,10 @@
 
             var normal = new Vector(eventArgs.HitPoint - centroid);
             var transitionSection = new TransitionSectionGeometry(
-                this.heightValueBox.Value,
-                this.widthValueBox.Value,
+                this.heightValueBox?.Value ?? 0.0,
+                this.widthValueBox?.Value ?? 0.0,
                 sectionLength,
-                this.radiusValueBox.Value,
+                this.radiusValueBox?.Value ?? 0.0,
                 centroid,
                 normal);
 
@@ -199,9 +199,9 @@
             var input = new ComponentInput();
             input.AddInputPolygon(new Polygon { Points = new ArrayList(this.pickedPoints) });
 
-            this.Component.SetAttribute(TransitionSectionPluginPropertyNames.RectangleWidth, this.widthValueBox.Value);
-            this.Component.SetAttribute(TransitionSectionPluginPropertyNames.RectangleHeight, this.heightValueBox.Value);
-            this.Component.SetAttribute(TransitionSectionPluginPropertyNames.CircleRadius, this.radiusValueBox.Value);
+            this.Component.SetAttribute(TransitionSectionPluginPropertyNames.RectangleWidth, this.widthValueBox?.Value ?? 0.0);
+            this.Component.SetAttribute(TransitionSectionPluginPropertyNames.RectangleHeight, this.heightValueBox?.Value ?? 0.0);
+            this.Component.SetAttribute(TransitionSectionPluginPropertyNames.CircleRadius, this.radiusValueBox?.Value ?? 0.0);
 
             this.CommitComponentInput(input);
         }

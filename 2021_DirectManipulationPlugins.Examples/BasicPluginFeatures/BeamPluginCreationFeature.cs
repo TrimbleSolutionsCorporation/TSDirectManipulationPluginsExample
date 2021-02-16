@@ -108,7 +108,7 @@
         private void OnPreviewRequested(object sender, ToleratedObjectEventArgs eventArgs)
         {
             this.Graphics.Clear();
-            this.currentAppliedValues = GetAppliedAttributes(this.Component);
+            this.currentAppliedValues = this.Component.GetAppliedAttributes();
             var profile = BasicPlugin.BeamPlugin.DefaultProfileName;
             var lengthFactor = 2.0;
 

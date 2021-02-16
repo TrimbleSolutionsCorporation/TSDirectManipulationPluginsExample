@@ -1,16 +1,14 @@
 ﻿namespace ComplexTransitionSectionPluginFeatures
 {
+    using ComplexTransitionSectionPlugin;
+    using ManipulationContexts;
     using System.Collections.Generic;
     using System.Linq;
-
+    using Tekla.Structures;
     using Tekla.Structures.Model;
     using Tekla.Structures.Plugins.DirectManipulation.Core;
     using Tekla.Structures.Plugins.DirectManipulation.Core.Features;
     using Tekla.Structures.Plugins.DirectManipulation.Services.Controls;
-
-    using ComplexTransitionSectionPlugin;
-    using ManipulationContexts;
-    using Tekla.Structures;
 
     /// <summary>
     /// Direct Manipulation feature for manipulating the transition section plugin.
@@ -66,7 +64,7 @@
             {
                 foreach (var component in this.Components)
                 {
-                    this.ModifyComponent(component, TransitionSectionPluginPropertyNames.CircleRadius, this.radiusValueBox.Value);
+                    this.ModifyComponent(component, TransitionSectionPluginPropertyNames.CircleRadius, this.radiusValueBox?.Value ?? 0.0);
                 }
             };
 
@@ -77,7 +75,7 @@
             {
                 foreach (var component in this.Components)
                 {
-                    this.ModifyComponent(component, TransitionSectionPluginPropertyNames.RectangleWidth, this.widthValueBox.Value);
+                    this.ModifyComponent(component, TransitionSectionPluginPropertyNames.RectangleWidth, this.widthValueBox?.Value ?? 0.0);
                 }
             };
 
@@ -88,7 +86,7 @@
             {
                 foreach (var component in this.Components)
                 {
-                    this.ModifyComponent(component, TransitionSectionPluginPropertyNames.RectangleHeight, this.heightValueBox.Value);
+                    this.ModifyComponent(component, TransitionSectionPluginPropertyNames.RectangleHeight, this.heightValueBox?.Value ?? 0.0);
                 }
             };
         }
@@ -145,6 +143,7 @@
 
             component.SetAttribute(key, value);
             component.Modify();
+            new Model().CommitChanges();
         }
     }
 }
