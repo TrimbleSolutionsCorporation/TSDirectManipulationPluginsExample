@@ -204,6 +204,12 @@
             this.Graphics.Clear();
             var profile = "HEA200";
 
+            string appliedProfile = string.Empty;
+            this.CustomPart.GetAttribute("Profile", ref appliedProfile);
+
+            if (!string.IsNullOrEmpty(appliedProfile))
+                profile = appliedProfile;
+
             for (var i = 1; i < points.Count; i++)
             {
                 var lineSegment = new LineSegment(points[i - 1], points[i]);

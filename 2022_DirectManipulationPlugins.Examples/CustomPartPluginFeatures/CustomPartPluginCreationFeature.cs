@@ -50,11 +50,6 @@
         private readonly List<ToleratedObjectEventArgs> pickedObjects = new List<ToleratedObjectEventArgs>();
 
         /// <summary>
-        /// The radius value box.
-        /// </summary>
-        private ValueBoxControl radiusValueBox;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ExampleCustomPartCreationFeature"/> class.
         /// </summary>
         public ExampleCustomPartCreationFeature()
@@ -87,15 +82,6 @@
         protected override void DefineFeatureContextualToolbar(IToolbar toolbar)
         {
             this.FetchPluginAttributes();
-            //if (!this.pluginAttributes.TryGetValue(Properties.Offset, out object defaultRadius))
-            //{
-            //    defaultRadius = 0.00;
-            //}
-
-            //this.radiusValueBox = toolbar.CreateValueTextBox((double)defaultRadius);
-            //this.radiusValueBox.Tooltip = "Top radius";
-            //this.radiusValueBox.Text = "Top radius";
-            //this.radiusValueBox.StateChanged += this.OnOffsetChanged;
 
             var button = toolbar.CreateButton("Start picking!");
             button.Tooltip = "Helpful tooltips for everyone!";
@@ -125,19 +111,6 @@
         {
             return segment.Length() < GeometryConstants.DISTANCE_EPSILON;
         }
-
-        /// <summary>
-        /// The offset changed handler method.
-        /// </summary>
-        /// <param name="control">The control.</param>
-        //private void OnOffsetChanged(object control, EventArgs eventArgs)
-        //{
-        //    ValueBoxControl valueControl = (ValueBoxControl)control;
-        //    if (valueControl.Value.HasValue)
-        //    {
-        //        this.CustomPart.SetAttribute(Properties.Offset, valueControl.Value.Value);
-        //    }
-        //}
 
         /// <summary>
         /// Fetch the plugin attributes.

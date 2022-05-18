@@ -24,6 +24,7 @@
         }
 
         /// <inheritdoc />
+        // Not used in this example. It shows some example controls
         protected override void DefineFeatureContextualToolbar(IToolbar toolbar)
         {
             if (toolbar == null)
