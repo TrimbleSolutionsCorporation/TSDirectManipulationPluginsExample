@@ -53,7 +53,7 @@
         /// Initializes a new instance of the <see cref="ExampleCustomPartCreationFeature"/> class.
         /// </summary>
         public ExampleCustomPartCreationFeature()
-            : base(CustomPartPlugin.PluginName, true, 2)
+            : base(CustomPartPlugin.PluginName, false, 2)
         {
         }
 
@@ -68,49 +68,51 @@
             this.pickingTool.PickSessionInterrupted += this.OnSessionInterrupted;
             this.pickingTool.PickUndone += this.OnPickUndone;
 
-            this.highlighter = this.CreateHighlighter();
+            //this.highlighter = this.CreateHighlighter();
+
+            this.pickingTool.StartPickingSession("Pick two points.");
         }
 
         /// <inheritdoc />
         protected override void Refresh()
         {
             this.pickedObjects.Clear();
-            this.highlighter.ClearHighlights();
+            //this.highlighter.ClearHighlights();
         }
 
         /// <inheritdoc />
-        protected override void DefineFeatureContextualToolbar(IToolbar toolbar)
-        {
-            this.FetchPluginAttributes();
+        //protected override void DefineFeatureContextualToolbar(IToolbar toolbar)
+        //{
+        //    this.FetchPluginAttributes();
 
-            var button = toolbar.CreateButton("Start picking!");
-            button.Tooltip = "Helpful tooltips for everyone!";
-            button.Clicked += (sender, eventArgs) =>
-            {
-                this.FetchPluginAttributes();
-                this.pickingTool?.StartPickingSession("Pick 2 points");
-            };
-        }
+        //    var button = toolbar.CreateButton("Start picking!");
+        //    button.Tooltip = "Helpful tooltips for everyone!";
+        //    button.Clicked += (sender, eventArgs) =>
+        //    {
+        //        this.FetchPluginAttributes();
+        //        this.pickingTool?.StartPickingSession("Pick 2 points");
+        //    };
+        //}
 
-        /// <summary>
-        /// Extract line segments from points.
-        /// </summary>
-        /// <param name="points">The points.</param>
-        /// <returns>The <see cref="IEnumerable{LineSegment}"/> of line segments.</returns>
-        private static IEnumerable<LineSegment> PointsToSegments(IEnumerable<Point> points)
-        {
-            return points.Zip(points.Skip(1), (p1, p2) => new LineSegment(p1, p2)).Where(s => !IsZeroLength(s));
-        }
+        ///// <summary>
+        ///// Extract line segments from points.
+        ///// </summary>
+        ///// <param name="points">The points.</param>
+        ///// <returns>The <see cref="IEnumerable{LineSegment}"/> of line segments.</returns>
+        //private static IEnumerable<LineSegment> PointsToSegments(IEnumerable<Point> points)
+        //{
+        //    return points.Zip(points.Skip(1), (p1, p2) => new LineSegment(p1, p2)).Where(s => !IsZeroLength(s));
+        //}
 
-        /// <summary>
-        /// Check if the segment has a zero length relative to the epsilon.
-        /// </summary>
-        /// <param name="segment">The line segment</param>
-        /// <returns><see cref="bool"/> whether the length is zero.</returns>
-        private static bool IsZeroLength(LineSegment segment)
-        {
-            return segment.Length() < GeometryConstants.DISTANCE_EPSILON;
-        }
+        ///// <summary>
+        ///// Check if the segment has a zero length relative to the epsilon.
+        ///// </summary>
+        ///// <param name="segment">The line segment</param>
+        ///// <returns><see cref="bool"/> whether the length is zero.</returns>
+        //private static bool IsZeroLength(LineSegment segment)
+        //{
+        //    return segment.Length() < GeometryConstants.DISTANCE_EPSILON;
+        //}
 
         /// <summary>
         /// Fetch the plugin attributes.
@@ -140,12 +142,11 @@
             }
 
             var points = this.pickedObjects.Select(o => o.HitPoint).Concat(new[] { eventArgs.HitPoint });
-            var segments = PointsToSegments(points).ToList();
-            segments.ForEach(s =>
-            {
-                this.Graphics.DrawProfile(profile, s, new Vector(0, 0, -100), 90);
-                this.Graphics.DrawExtrema(s, 200, 200, new Vector(0, 0, -100));
-            });
+
+            var lengthVector = new Vector(eventArgs.HitPoint - points.Last());
+
+            this.Graphics.DrawProfile(profile, new LineSegment(points.Last(), 
+                lengthVector + points.Last()), new Vector(0, 0, -150), rotationInDegrees: 90);
         }
 
         /// <summary>
