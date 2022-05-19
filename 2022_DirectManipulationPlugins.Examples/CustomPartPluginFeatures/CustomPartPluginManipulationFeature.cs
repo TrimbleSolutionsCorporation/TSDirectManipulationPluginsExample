@@ -1,13 +1,12 @@
-﻿namespace Tekla.Structures.Plugins.DirectManipulation.Examples.Feature
+﻿namespace CustomPartPluginFeatures
 {
     using System.Collections.Generic;
 
-    using Core;
-    using Core.Features;
+    using Tekla.Structures.Model;
+    using Tekla.Structures.Plugins.DirectManipulation.Core.Features;
 
     using CustomPartPlugin;
-
-    using Model;
+    using Tekla.Structures.Plugins.DirectManipulation.Core;
 
     /// <summary>
     /// An example class of a Direct Manipulation API manipulation feature for a custom part plugin.

@@ -1,22 +1,16 @@
-﻿namespace Tekla.Structures.Plugins.DirectManipulation.Examples.Feature
+﻿namespace CustomPartPluginFeatures
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
 
-    using Core;
-    using Core.Features;
-
-    using Geometry3d;
-
-    using Model;
-
-    using Services.Handles;
-    using Services.Tools;
-
+    using Tekla.Structures.Geometry3d;
+    using Tekla.Structures.Model;
+    using Tekla.Structures.Plugins.DirectManipulation.Core.Features;
+    using Tekla.Structures.Plugins.DirectManipulation.Core;
+    using Tekla.Structures.Plugins.DirectManipulation.Services.Handles;
     using Tekla.Structures.Plugins.DirectManipulation.Services.Utilities;
-
-    using HandleLocationType = Services.Handles.HandleLocationType;
+    using Tekla.Structures.Plugins.DirectManipulation.Services.Tools;
 
     /// <summary>
     /// The <see cref="CustomPartPluginManipulationContext"/> class represents an example manipulator for the <see cref="CustomPartPluginManipulationFeature"/>.
@@ -213,7 +207,7 @@
             for (var i = 1; i < points.Count; i++)
             {
                 var lineSegment = new LineSegment(points[i - 1], points[i]);
-                this.Graphics.DrawProfile(profile, lineSegment, new Vector(0, 0, -100), 90);
+                this.Graphics.DrawProfile(profile, lineSegment, new Vector(0, 0, -100));
             }
         }
 
