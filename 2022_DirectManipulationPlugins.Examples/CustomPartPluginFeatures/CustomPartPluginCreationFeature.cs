@@ -21,19 +21,14 @@
     public class ExampleCustomPartCreationFeature : CustomPartPluginCreationFeatureBase
     {
         /// <summary>
-        /// The current applied values.
-        /// </summary>
-        private Dictionary<string, object> currentAppliedValues;
-
-        /// <summary>
         /// The input range.
         /// </summary>
         private readonly InputRange inputRange;
 
         /// <summary>
-        /// The plugin attributes.
+        /// The current applied values.
         /// </summary>
-        private Dictionary<string, object> pluginAttributes;
+        private Dictionary<string, object> currentAppliedValues;
 
         /// <summary>
         /// The picking tool.
@@ -46,16 +41,12 @@
         private readonly List<Point> pickedPoints = new List<Point>();
 
         /// <summary>
-        /// The picked points.
-        /// </summary>
-        private readonly List<ToleratedObjectEventArgs> pickedObjects = new List<ToleratedObjectEventArgs>();
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ExampleCustomPartCreationFeature"/> class.
         /// </summary>
         public ExampleCustomPartCreationFeature()
-            : base(CustomPartPlugin.PluginName, false, 2)
+            : base(CustomPartPlugin.PluginName)
         {
+            this.inputRange = InputRange.AtMost(2);
         }
 
         /// <inheritdoc />
@@ -73,7 +64,7 @@
         /// <inheritdoc />
         protected override void Refresh()
         {
-            this.pickedObjects.Clear();
+            this.pickedPoints.Clear();
         }
 
         /// <summary>
@@ -89,9 +80,9 @@
             this.pickingTool.PreviewRequested += this.OnPreviewRequested;
             this.pickingTool.ObjectPicked += this.OnObjectPicked;
             this.pickingTool.InputValidationRequested += this.OnInputValidationRequested;
-            this.pickingTool.PickSessionEnded += this.OnPickSessionEnded;
+            this.pickingTool.PickSessionEnded += this.OnPickEnded;
             this.pickingTool.PickSessionInterrupted += this.OnSessionInterrupted;
-            this.pickingTool.PickUndone += this.OnPickUndone;
+            this.pickingTool.PickUndone += this.OnPickingUndone;
         }
 
         /// <summary>
@@ -107,17 +98,38 @@
             this.pickingTool.PreviewRequested -= this.OnPreviewRequested;
             this.pickingTool.ObjectPicked -= this.OnObjectPicked;
             this.pickingTool.InputValidationRequested -= this.OnInputValidationRequested;
-            this.pickingTool.PickSessionEnded -= this.OnPickSessionEnded;
+            this.pickingTool.PickSessionEnded -= this.OnPickEnded;
             this.pickingTool.PickSessionInterrupted -= this.OnSessionInterrupted;
-            this.pickingTool.PickUndone -= this.OnPickUndone;
+            this.pickingTool.PickUndone -= this.OnPickingUndone;
         }
 
         /// <summary>
-        /// Fetch the plugin attributes.
+        /// Event handler for the <see cref="PickingTool.PreviewRequested"/> event.
         /// </summary>
-        private void FetchPluginAttributes()
+        /// <param name="sender">The sender object.</param>
+        /// <param name="eventArgs">The event argument for the handler.</param>
+        private void OnPreviewRequested(object sender, ToleratedObjectEventArgs eventArgs)
         {
-            this.pluginAttributes = this.CustomPart.GetAppliedAttributes();
+            this.Graphics.Clear();
+            this.currentAppliedValues = this.CustomPart.GetAppliedAttributes();
+            var profile = CustomPartPlugin.DefaultProfileName;
+            var lengthFactor = 2.0;
+
+            if (this.currentAppliedValues.TryGetValue("Profile", out var profileValue))
+            {
+                profile = profileValue.ToString();
+            }
+
+            if (this.currentAppliedValues.TryGetValue("LengthFactor", out var lengthFactorValue))
+            {
+                double.TryParse(lengthFactorValue.ToString(), out lengthFactor);
+            }
+
+            if (this.pickedPoints.Any())
+            {
+                var lengthVector = new Vector(eventArgs.HitPoint - this.pickedPoints.Last()) * lengthFactor;
+                this.Graphics.DrawProfile(profile, new LineSegment(this.pickedPoints.Last(), lengthVector + this.pickedPoints.Last()), new Vector(0, 0, -150), rotationInDegrees: 90);
+            }
         }
 
         /// <summary>
@@ -156,67 +168,37 @@
         }
 
         /// <summary>
-        /// Event handler for the <see cref="PickingTool.PreviewRequested"/> event.
+        /// Event handler for the <see cref="PickingTool.PickSessionEnded"/> event.
         /// </summary>
-        /// <param name="sender">The sender.</param>
-        /// <param name="eventArgs">The <see cref="ToleratedObjectEventArgs"/> instance containing the event data.</param>
-        private void OnPreviewRequested(object sender, ToleratedObjectEventArgs eventArgs)
+        /// <param name="sender">The sender object.</param>
+        /// <param name="eventArgs">The event argument for the handler.</param>
+        private void OnPickEnded(object sender, EventArgs eventArgs)
         {
-            this.Graphics.Clear();
-            this.currentAppliedValues = this.CustomPart.GetAppliedAttributes();
-            var profile = CustomPartPlugin.DefaultProfileName;
-            var lengthFactor = 2.0;
-
-            if (this.currentAppliedValues.TryGetValue("Profile", out var profileValue))
-            {
-                profile = profileValue.ToString();
-            }
-
-            if (this.currentAppliedValues.TryGetValue("LengthFactor", out var lengthFactorValue))
-            {
-                double.TryParse(lengthFactorValue.ToString(), out lengthFactor);
-            }
-
-            if (this.pickedPoints.Any())
-            {
-                var lengthVector = new Vector(eventArgs.HitPoint - this.pickedPoints.Last()) * lengthFactor;
-                this.Graphics.DrawProfile(profile, new LineSegment(this.pickedPoints.Last(), lengthVector + this.pickedPoints.Last()), new Vector(0, 0, -150), rotationInDegrees: 90);
-            }
+            var input = new Polygon { Points = new ArrayList(this.pickedPoints) };
+            this.CommitCustomPartInput(input);
         }
 
         /// <summary>
-        /// Event handler for the <see cref="PickingTool.PickSessionEnded"/> event.
+        /// Event handler for the <see cref="PickingTool.PickUndone"/> event.
         /// </summary>
-        /// <param name="sender">The sender.</param>
-        /// <param name="eventArgs">The event args.</param>
-        private void OnPickSessionEnded(object sender, EventArgs eventArgs)
+        /// <param name="sender">The sender object.</param>
+        /// <param name="eventArgs">The event argument for the handler.</param>
+        private void OnPickingUndone(object sender, EventArgs eventArgs)
         {
-            this.Graphics.Clear();
-            if (this.pickedObjects.Count == 2)
+            if (this.pickedPoints.Count > 0)
             {
-                var input = new Polygon() { Points = new ArrayList(this.pickedObjects.Select(o => o.HitPoint).ToList()) };
-                this.CommitCustomPartInput(input);
+                this.pickedPoints.RemoveAt(this.pickedPoints.Count - 1);
             }
         }
 
         /// <summary>
         /// Event handler for the <see cref="PickingTool.PickSessionInterrupted"/> event.
         /// </summary>
-        /// <param name="sender">The sender.</param>
-        /// <param name="eventArgs">The event args.</param>
+        /// <param name="sender">The sender object.</param>
+        /// <param name="eventArgs">The event argument for the handler.</param>
         private void OnSessionInterrupted(object sender, EventArgs eventArgs)
         {
             Debug.WriteLine("Picking session got interrtupted!");
-        }
-
-        /// <summary>
-        /// Event handler for the <see cref="PickingTool.PickUndone"/> event.
-        /// </summary>
-        /// <param name="sender">The sender.</param>
-        /// <param name="eventArgs">The event args.</param>
-        private void OnPickUndone(object sender, EventArgs eventArgs)
-        {
-            this.pickedObjects.RemoveAt(this.pickedObjects.Count - 1);
         }
     }
 }
