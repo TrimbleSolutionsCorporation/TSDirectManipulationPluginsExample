@@ -6,8 +6,8 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Tekla.Structures.Model" Version="2022.0.10715" />
-    <PackageReference Include="Tekla.Structures.Plugins.DirectManipulation" Version="2022.0.10718" />
+    <PackageReference Include="Tekla.Structures.Model" Version="2023.0.1" />
+    <PackageReference Include="Tekla.Structures.Plugins.DirectManipulation" Version="2023.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CustomPartPlugin\CustomPartPlugin.csproj" />
