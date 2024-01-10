@@ -1,2 +1,2 @@
 # TSDirectManipulationPluginsExample
-Following examples show how to use new Prototype dll: Direct Manipulation for Plugins
+Following examples show how to use Direct Manipulation for Plugins libraries
