@@ -17,6 +17,11 @@
     public sealed class TransitionSectionManipulationFeature : PluginManipulationFeatureBase
     {
         /// <summary>
+        /// The part finish.
+        /// </summary>
+        private string partFinish = TransitionSectionPlugin.DefaultPartFinish;
+
+        /// <summary>
         /// The rectangle height.
         /// </summary>
         private double rectangleHeight = TransitionSectionPlugin.DefaultRectangleHeight;
@@ -30,6 +35,11 @@
         /// The circle radius.
         /// </summary>
         private double circleRadius = TransitionSectionPlugin.DefaultCircleRadius;
+
+        /// <summary>
+        /// Drop down that contains the finish of parts.
+        /// </summary>
+        private DropDownListControl finishDropDown;
 
         /// <summary>
         /// Value box that contains the radius of the circular section.
@@ -57,6 +67,19 @@
         /// <inheritdoc />
         protected override void DefineFeatureContextualToolbar(IToolbar toolbar)
         {
+            object myObject = "PAINT";
+            finishDropDown = toolbar.CreateDropDown(new List<object> { "Hello", "FIN1", "FIN2", myObject }, myObject);
+            finishDropDown.Tooltip = "FINISH";
+            finishDropDown.StateChanged += (control, eventArgs) =>
+            {
+                foreach (var component in this.Components)
+                {
+                    component.SetAttribute(TransitionSectionPluginPropertyNames.Finish, finishDropDown.SelectedItem.ToString());
+                    component.Modify();
+                    new Model().CommitChanges();
+                }
+            };
+
             this.radiusValueBox = toolbar.CreateValueTextBox();
             this.radiusValueBox.Tooltip = "Top radius";
             this.radiusValueBox.Title = "r=";
@@ -110,6 +133,11 @@
         /// </summary>
         private void GetCurrentValues(Component component)
         {
+            if (!(component.Select() && component.GetAttribute(TransitionSectionPluginPropertyNames.Finish, ref this.partFinish)))
+            {
+                this.partFinish = TransitionSectionPlugin.DefaultPartFinish;
+            }
+
             if (!(component.Select() && component.GetAttribute(TransitionSectionPluginPropertyNames.RectangleHeight, ref this.rectangleHeight)))
             {
                 this.rectangleHeight = TransitionSectionPlugin.DefaultRectangleHeight;
@@ -125,6 +153,7 @@
                 this.circleRadius = TransitionSectionPlugin.DefaultCircleRadius;
             }
 
+            this.finishDropDown.SelectedItem = this.partFinish;
             this.radiusValueBox.Value = this.circleRadius;
             this.heightValueBox.Value = this.rectangleHeight;
             this.widthValueBox.Value = this.rectangleWidth;

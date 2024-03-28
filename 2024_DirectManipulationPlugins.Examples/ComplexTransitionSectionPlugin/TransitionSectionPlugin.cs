@@ -81,6 +81,11 @@
         public const double DefaultSectionLength = 1000.0;
 
         /// <summary>
+        /// The default part finish.
+        /// </summary>
+        public const string DefaultPartFinish = "PAINT";
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="TransitionSectionPlugin"/> class.
         /// </summary>
         /// <param name="data">The <see cref="TransitionSectionPluginData"/> object for the plugin.</param>
@@ -224,7 +229,7 @@
                 this.material = "Steel_Undefined";
 
             if (this.IsDefaultValue(this.finish))
-                this.finish = "PAINT";
+                this.finish = DefaultPartFinish;
 
             if (this.IsDefaultValue(this.rectangleWidth))
                 this.rectangleWidth = DefaultRectangleWidth;
