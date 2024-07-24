@@ -174,6 +174,8 @@
             var input = new ComponentInput();
             input.AddInputPolygon(new Polygon { Points = new ArrayList(this.pickedPoints) });
             this.CommitComponentInput(input);
+
+            this.pickingTool.StartPickingSession("Pick points again to continue inserting beam plugin.");
         }
 
         /// <summary>
