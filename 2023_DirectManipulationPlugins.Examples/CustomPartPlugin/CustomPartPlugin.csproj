@@ -39,9 +39,6 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.13.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
@@ -60,9 +57,6 @@
     </Reference>
     <Reference Include="Tekla.Structures.Dialog, Version=2023.0.0.0, Culture=neutral, PublicKeyToken=2f04dbe497b71114, processorArchitecture=MSIL">
       <HintPath>..\packages\Tekla.Structures.Dialog.2023.0.1\lib\net40\Tekla.Structures.Dialog.dll</HintPath>
-    </Reference>
-    <Reference Include="Tekla.Structures.Drawing, Version=2023.0.0.0, Culture=neutral, PublicKeyToken=2f04dbe497b71114, processorArchitecture=MSIL">
-      <HintPath>..\packages\Tekla.Structures.Drawing.2023.0.1\lib\net40\Tekla.Structures.Drawing.dll</HintPath>
     </Reference>
     <Reference Include="Tekla.Structures.Model, Version=2023.0.0.0, Culture=neutral, PublicKeyToken=2f04dbe497b71114, processorArchitecture=MSIL">
       <HintPath>..\packages\Tekla.Structures.Model.2023.0.1\lib\net40\Tekla.Structures.Model.dll</HintPath>
