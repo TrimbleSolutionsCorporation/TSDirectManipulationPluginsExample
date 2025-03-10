@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputPath>..\BuildDrop\</OutputPath>
+    <BaseOutputPath>..\BuildDrop\</BaseOutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Tekla.Structures.Dialog" Version="2024.0.4" />
+    <PackageReference Include="Tekla.Structures.Model" Version="2024.0.4" />
+    <PackageReference Include="Tekla.Structures.Plugins" Version="2024.0.4" />
+    <PackageReference Include="Tekla.Structures.Plugins.DirectManipulation" Version="2024.0.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CustomPartPlugin\CustomPartPlugin.csproj" />
+  </ItemGroup>
+</Project>
