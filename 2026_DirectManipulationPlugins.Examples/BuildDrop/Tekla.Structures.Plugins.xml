@@ -1,0 +1,2922 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Tekla.Structures.Plugins</name>
+    </assembly>
+    <members>
+        <member name="T:Tekla.Structures.Plugins.ConnectionBase">
+            <summary>
+            The ConnectionBase class is a base class for defining connections, details and seams.
+            These types are more specialized and restricted by the input values than the ones derived
+            from PluginBase.
+            <para>
+            The coordinate system for connections, details and seams is explained in the Tekla Structures
+            help, in the part about the position type of custom components. The position type defines the
+            origin of the custom component, relative to the main part.
+            </para>
+            </summary>
+            <example>
+            In the following example, a .inp file is used for defining the dialog.
+            Notice that starting from version 15.0, the System.Windows.Forms namespace
+            can be used to create rich user interfaces. See e.g. the PluginFormBase class
+            in the Tekla.Structures.Dialog documentation for more information. When using System.Windows.Forms,
+            the name of the form has to be the same one as the connection name for ConnectionBase, otherwise
+            the form will be loaded and shown but the apply method won't work (modify will work).
+            <code>
+            using System;
+            using System.Windows.Forms;
+            
+            using Tekla.Structures;
+            using Tekla.Structures.Plugins;
+            using Tekla.Structures.Geometry3d;
+            using Tekla.Structures.Model;
+            
+            public class StructuresData3
+            {
+                [StructuresField("P1")]
+                public double Parameter1;
+                [StructuresField("P2")]
+                public string Parameter2;
+            }
+            
+            [Plugin("BeamConnection")] // The name of the connection in the catalog
+            [PluginUserInterface(UserInterfaceDefinitions.Plugin3)]
+            [SecondaryType(SecondaryType.SECONDARYTYPE_ONE)]
+            [AutoDirectionType(AutoDirectionTypeEnum.AUTODIR_BASIC)]
+            [PositionType(PositionTypeEnum.COLLISION_PLANE)]
+            public class BeamConnection : ConnectionBase
+            {
+                private readonly StructuresData3 data;
+                private readonly Model myModel;
+                public BeamConnection(StructuresData3 data)
+                {
+                    this.data = data;
+                    myModel = new Model();
+                }
+            
+                static Beam CreateBeam(Point point1, Point point2, string profile)
+                {
+                    Beam myBeam = new Beam(point1, point2);
+                    myBeam.Profile.ProfileString = profile;
+                    myBeam.Finish = "PAINT";
+                    myBeam.Position.Depth = Position.DepthEnum.MIDDLE;
+                    myBeam.Position.Plane = Position.PlaneEnum.RIGHT;
+                    myBeam.Insert();
+                    return myBeam;
+                }
+            
+                void CreateFitting(double thickness, ModelObject mySecondary)
+                {
+                    Fitting myFitting = new Fitting();
+                    myFitting.Plane.Origin = new Point(thickness, 0, 0);
+                    myFitting.Plane.AxisX = new Vector(0, 1000, 0);
+                    myFitting.Plane.AxisY = new Vector(0, 0, 1000);
+                    myFitting.Father = mySecondary;
+            
+                    myFitting.Insert();
+                }
+            
+                public override bool Run()
+                {
+                    try
+                    {
+                        // The default values
+                        if (IsDefaultValue(data.Parameter1))
+                            data.Parameter1 = 300.0;
+                        if (IsDefaultValue(data.Parameter2))
+                            data.Parameter2 = "PL10*300";
+            
+                        // Get secondary
+                        Beam secondary = myModel.SelectModelObject(Secondaries[0]) as Beam;
+            
+                        Point point1 = new Point();
+                        Point point2 = new Point();
+            
+                        point1.Y -= data.Parameter1 / 2;
+                        point2.Y += data.Parameter1 / 2;
+            
+                        Beam newBeam = CreateBeam(point1, point2, data.Parameter2);
+            
+                        double thickness = 0.0;
+                        newBeam.GetReportProperty("PROFILE.WIDTH", ref thickness);
+                        this.CreateFitting(thickness, secondary);
+                    }
+                    catch (Exception e)
+                    {
+                        MessageBox.Show(e.ToString());
+                    }
+            
+                    return true;
+                }
+            
+                public class UserInterfaceDefinitions
+                {
+                    public const string Plugin3 = @"" +
+                    @"page(""TeklaStructures"","""")" + "\n" +
+                     "{\n" +
+                     "    joint(1, BeamConnection)\n" +
+                     "    {\n" +
+                    @"        tab_page(""Beam test"", ""Parameters"", 1)" + "\n" +
+                     "        {\n" +
+                    @"            parameter(""Plate Length"", ""P1"", distance, number, 1)" + "\n" +
+                    @"            parameter(""Profile"", ""P2"", profile, text, 2)" + "\n" +
+                     "        }\n" +
+                     "    }\n" +
+                     "}\n";
+                }
+            }
+            </code>
+            </example>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.InputObjects">
+            <summary>
+            The actual list of inputs, same as for PluginBase.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase._Positions">
+            <summary>
+            Position attributes from InputObjects.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase._Secondaries">
+            <summary>
+            Secondary objects from InputObjects.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase._Identifier">
+            <summary>
+            The identifier of the executable plug-in instance.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase._Code">
+            <summary>
+            The code of the executable connection instance.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.ConnectionBase.Identifier">
+            <summary>
+            The identifier of the executable plug-in instance.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.ConnectionBase.Code">
+            <summary>
+            The connection code of the executable connection instance. The maximum length is 22 characters.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.ConnectionBase.SecondaryType">
+            <summary>
+            Defines how many secondaries a connection can have.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.SecondaryType.SECONDARYTYPE_ZERO">
+            <summary>
+            The connection can have zero secondaries.
+            Zero secondaries means that the connection is a detail.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.SecondaryType.SECONDARYTYPE_ONE">
+            <summary>
+            The connection can have one secondary.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.SecondaryType.SECONDARYTYPE_TWO">
+            <summary>
+            The connection can have two secondaries.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.SecondaryType.SECONDARYTYPE_MULTIPLE">
+            <summary>
+            The connection can have multiple secondaries.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.ConnectionBase.InputObjectType">
+            <summary>
+            Defines the input object type.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.InputObjectType.INPUTOBJECT_PART">
+            <summary>
+            The input object is a part instance.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.InputObjectType.INPUTOBJECT_CUSTOMPART">
+            <summary>
+            The input object can be a custom part (component).
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.ConnectionBase.SeamInputType">
+            <summary>
+            Defines the type of the input.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.SeamInputType.INPUT_2_POINTS">
+            <summary>
+            The input is two points. The data is returned as an array list of points.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.ConnectionBase.SeamInputType.INPUT_POLYGON">
+            <summary>
+            The input is any number of points (a polygon). The data is returned as an array list of points.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.ConnectionBase.Run">
+            <summary>
+            The main method of the component. Inside Run the user can implement the logic based on
+            the user given attributes and input. Inside the method input can be found from the provided 
+            properties: Primary, Secondaries and Positions.
+            </summary>
+            <returns>True on success.</returns>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.ConnectionBase.Primary">
+            <summary>
+            The identifier that was selected as the primary object.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.ConnectionBase.Positions">
+            <summary>
+            The positional attributes for a detail or a seam instance; one for a detail, N for a seam.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.ConnectionBase.Secondaries">
+            <summary>
+            A list of secondary identifiers of a connection or a seam.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.ConnectionBase.IsDefaultValue(System.Int32)">
+            <summary>
+            Returns true if the given value is set to the default value for this type.
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.ConnectionBase.IsDefaultValue(System.Double)">
+            <summary>
+            Returns true if the given value is set to the default value for this type.
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.ConnectionBase.IsDefaultValue(System.String)">
+            <summary>
+            Returns true if the given value is set to the default value (empty string).
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.ConnectionBase.GetConnectionCode">
+            <summary>
+            Gets the connection code and sets <see cref="F:Tekla.Structures.Plugins.ConnectionBase._Code"/> to be the gotten code.
+            </summary>
+            <returns>Always true.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.ConnectionBase.SetConnectionCode">
+            <summary>
+            Sets the connection code to be the value of <see cref="F:Tekla.Structures.Plugins.ConnectionBase._Code"/>.
+            </summary>
+            <exception cref="T:System.OverflowException">
+            Thrown when the length of <see cref="F:Tekla.Structures.Plugins.ConnectionBase._Code"/> exceeds 22 characters.
+            </exception>
+            <returns>True if the connection code was successfully set.</returns>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.SecondaryTypeAttribute">
+            <summary>
+            The SecondaryTypeAttribute class is used for storing the number of needed secondaries in the connection.
+            Based on the type the system can then correctly ask for user input in the creation.
+            The attribute is initialized from the custom attribute i.e.
+                [SecondaryType(ConnectionBase.SecondaryType.SECONDARYTYPE_ONE)] 
+            in the connection source.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.SecondaryTypeAttribute.#ctor(Tekla.Structures.Plugins.ConnectionBase.SecondaryType)">
+            <summary>
+            The custom attribute [SecondaryType()] uses this to store the secondary type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The secondary type.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.SecondaryTypeAttribute.Type">
+            <summary>
+            The custom attribute [SecondaryType()] uses this to store the secondary type to the system. 
+            This is not to be used by itself.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.SecondaryTypeAttribute.#ctor(System.Int32)">
+            <summary>
+            The custom attribute [SecondaryType()] uses this to store the secondary type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The secondary type.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.InputObjectTypeAttribute">
+            <summary>
+            The InputObjectTypeAttribute class is used for storing the type of the input.
+            Based on the type the system can then correctly ask for user input in the creation.
+            The attribute is initialized from the custom attribute 
+                [InputObjectType(ConnectionBase.InputObjectType.INPUTOBJECT_PART)] 
+            in the connection source.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.InputObjectTypeAttribute.#ctor(Tekla.Structures.Plugins.ConnectionBase.InputObjectType)">
+            <summary>
+            The custom attribute [InputObjectType()] uses this to store the input object type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The input object type.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.InputObjectTypeAttribute.Type">
+            <summary>
+            The custom attribute [InputObjectType()] uses this to store the input object type to the system. 
+            This is not to be used by itself.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.InputObjectTypeAttribute.#ctor(System.Int32)">
+            <summary>
+            The custom attribute [InputObjectType()] uses this to store the input object type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The input object type.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PositionTypeAttribute">
+            <summary>
+            The PositionTypeAttribute class is used for storing the position type of the connection.
+            Based on the type the system will then position the connection in the creation.
+            The attribute is initialized from the custom attribute 
+                [PositionType(PositionTypeEnum.COLLISION_PLANE)] 
+            in the connection source.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PositionTypeAttribute.#ctor(Tekla.Structures.PositionTypeEnum)">
+            <summary>
+            The custom attribute [PositionType()] uses this to store the position type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The position type.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PositionTypeAttribute.Type">
+            <summary>
+            The custom attribute [PositionType()] uses this to store the position type to the system. 
+            This is not to be used by itself.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PositionTypeAttribute.#ctor(System.Int32)">
+            <summary>
+            The custom attribute [PositionType()] uses this to store the position type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The position type.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.DetailTypeAttribute">
+            <summary>
+            The DetailTypeAttribute class is used for storing the detail type.
+            Based on the type the system will then position the detail in the creation.
+            The attribute is initialized from the custom attribute 
+                [DetailType(DetailTypeEnum.END)] 
+            in the connection source.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DetailTypeAttribute.#ctor(Tekla.Structures.DetailTypeEnum)">
+            <summary>
+            The custom attribute [DetailType()] uses this to store the type of the detail to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The detail type.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.DetailTypeAttribute.Type">
+            <summary>
+            The custom attribute [DetailType()] uses this to store the type of the detail to the system. 
+            This is not to be used by itself.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DetailTypeAttribute.#ctor(System.Int32)">
+            <summary>
+            The custom attribute [DetailType()] uses this to store the type of the detail to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The detail type.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.AutoDirectionTypeAttribute">
+            <summary>
+            The AutoDirectionTypeAttribute class is used for storing the auto direction type.
+            Based on the type the system will then calculate the up direction of the connection/detail
+            if the "Auto" up direction is chosen in the dialog.
+            The attribute is initialized from the custom attribute 
+                [AutoDirectionType(AutoDirectionTypeEnum.AUTODIR_DETAIL)] 
+            in the connection/detail source.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.AutoDirectionTypeAttribute.#ctor(Tekla.Structures.AutoDirectionTypeEnum)">
+            <summary>
+            The custom attribute [AutoDirectionType()] uses this to store the auto direction type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The auto direction type.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.AutoDirectionTypeAttribute.Type">
+            <summary>
+            The custom attribute [AutoDirectionType()] uses this to store the auto direction type to the system. 
+            This is not to be used by itself.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.AutoDirectionTypeAttribute.#ctor(System.Int32)">
+            <summary>
+            The custom attribute [AutoDirectionType()] uses this to store the auto direction type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The auto direction type.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.SeamInputTypeAttribute">
+            <summary>
+            The SeamInputTypeAttribute class is used for identifying that the connection is a seam and defining the input type.
+            Based on the type the system will then ask for the correct number of input points in the creation.
+            The attribute is initialized from the custom attribute 
+                [SeamInputType(ConnectionBase.SeamInputType.INPUT_POLYGON)] 
+            in the connection source.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.SeamInputTypeAttribute.#ctor(Tekla.Structures.Plugins.ConnectionBase.SeamInputType)">
+            <summary>
+            The custom attribute [SeamInputType()] uses this to store the input type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The seam input type.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.SeamInputTypeAttribute.Type">
+            <summary>
+            The custom attribute [SeamInputType()] uses this to store the input type to the system. 
+            This is not to be used by itself.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.SeamInputTypeAttribute.#ctor(System.Int32)">
+            <summary>
+            The custom attribute [SeamInputType()] uses this to store the input type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The seam input type.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.CustomPartBase">
+            <summary>
+            The CustomPartBase class is a base class for defining custom parts.
+            These types are more specialized and restricted by the input values than the ones derived
+            from PluginBase.
+            <para>
+            The coordinate system for connections, details and seams is explained in the Tekla Structures
+            help, in the part about the position type of custom components. The position type defines the
+            origin of the custom component, relative to the main part.
+            </para>
+            </summary>
+            <example>
+            In the following example, a .inp file is used for defining the dialog.
+            Notice that starting from version 15.0, the System.Windows.Forms namespace
+            can be used to create rich user interfaces. See e.g. the PluginFormBase class
+            in the Tekla.Structures.Dialog documentation for more information. 
+            <code>
+            using System;
+            using System.Windows.Forms;
+            
+            using Tekla.Structures.Model;
+            using Tekla.Structures.Plugins;
+            using Tekla.Structures.Geometry3d;
+            
+            public class StructuresData3
+            {
+                [StructuresField("P1")]
+                public double Parameter1;
+                [StructuresField("P2")]
+                public string Parameter2;
+            }
+            
+            [Plugin("CustomBeam")] // The name of the connection in the catalog
+            [PluginUserInterface(UserInterfaceDefinitions.Plugin3)]
+            public class CustomBeam: CustomPartBase
+            {
+                private readonly StructuresData3 data;
+            
+                public CustomBeam(StructuresData3 data)
+                {
+                    this.data = data;
+                }
+            
+                static Beam CreateBeam(Point point1, Point point2, string profile)
+                {
+                    Beam myBeam = new Beam(point1, point2);
+                    myBeam.Profile.ProfileString = profile;
+                    myBeam.Finish = "PAINT";
+                    myBeam.Position.Depth = Position.DepthEnum.MIDDLE;
+                    myBeam.Position.Plane = Position.PlaneEnum.RIGHT;
+                    myBeam.Insert();
+                    return myBeam;
+                }
+            
+                static void CreateFitting(double thickness, Beam myPart)
+                {
+                    Fitting myFitting = new Fitting();
+                    myFitting.Plane.Origin = new Point(thickness, 0, 0);
+                    myFitting.Plane.AxisX = new Vector(0, 1000, 0);
+                    myFitting.Plane.AxisY = new Vector(0, 0, 1000);
+                    myFitting.Father = myPart;
+            
+                    myFitting.Insert();
+                }
+            
+                public override bool Run()
+                {
+                    try
+                    {
+                        // The default values
+                        if(IsDefaultValue(data.Parameter1))
+                            data.Parameter1 = 300.0;
+                        if (IsDefaultValue(data.Parameter2))
+                            data.Parameter2 = "PL10*300";
+            
+                        // Get input points
+                        Point point1 = new Point(this.Positions[0]);
+                        Point point2 = new Point(this.Positions[1]);
+                        if (data.Parameter1 > 0)
+                        {
+                            point1.Y -= data.Parameter1 / 2;
+                            point2.Y += data.Parameter1 / 2;
+                        }
+            
+                        Beam newBeam = CreateBeam(point1, point2, data.Parameter2);
+            
+                        double thickness = 0.0;
+                        newBeam.GetReportProperty("PROFILE.WIDTH", ref thickness);
+                        CreateFitting(thickness, newBeam);
+                    }
+                    catch(Exception e)
+                    {
+                        MessageBox.Show(e.ToString());
+                    }
+            
+                    return true;
+                }
+            
+                public class UserInterfaceDefinitions 
+                {
+                    public const string Plugin3 = @"" +
+                    @"page(""TeklaStructures"","""")" + "\n" +
+                    "{\n" +
+                    "    joint(1, BeamConnection)\n" +
+                    "    {\n" +
+                    @"        tab_page(""Beam test"", ""Parameters"", 1)" + "\n" +
+                    "        {\n" +
+                    @"            parameter(""Plate Length"", ""P1"", distance, number, 1)" + "\n" +
+                    @"            parameter(""Profile"", ""P2"", profile, text, 2)" + "\n" +
+                    "        }\n" +
+                    "    }\n" +
+                    "}\n";
+                }
+            }
+            </code>
+            </example>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.CustomPartBase.InputObjects">
+            <summary>
+            The actual list of inputs, same as for PluginBase.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.CustomPartBase._Positions">
+            <summary>
+            Positions from Input.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.CustomPartBase._Identifier">
+            <summary>
+            The identifier of the executable plug-in instance.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.CustomPartBase.Identifier">
+            <summary>
+            The identifier of the executable plug-in instance.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.CustomPartBase.CustomPartInputType">
+            <summary>
+            Defines the type of the input. 
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.CustomPartBase.CustomPartInputType.INPUT_2_POINTS">
+            <summary>
+            The input is two points. The data is returned as an array list of points. Default value.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.CustomPartBase.CustomPartInputType.INPUT_1_POINT">
+            <summary>
+            The input is one point. The data is returned as an array list of points.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.CustomPartBase.CustomPartPositioningType">
+            <summary>
+            Defines the type of the positioning.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.CustomPartBase.CustomPartPositioningType.POSITIONING_BY_CENTER_OF_BOUNDING_BOX">
+            <summary>
+            Positioning happens based on total extrema of objects. Default value.
+            Same as "Use center of the bounding box in positioning" value on in custom component wizard
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.CustomPartBase.CustomPartPositioningType.POSITIONING_BY_INPUTPOINTS">
+            <summary>
+            Positioning happens based on input points and extrema of objects. Similar to exact positioning in custom parts
+            Same as "Use center of the bounding box in positioning" value off in custom component wizard
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.CustomPartBase.Run">
+            <summary>
+            The main method of the component. Inside Run the user can implement the logic based on
+            the user given attributes and input. Inside the method input can be found from the provided 
+            properties: Primary, Secondaries and Positions.
+            </summary>
+            <returns>True on success.</returns>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.CustomPartBase.Positions">
+            <summary>
+            The positional attributes for a custom part instance.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.CustomPartBase.IsDefaultValue(System.Int32)">
+            <summary>
+            Returns true if the given value is set to the default value for this type.
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.CustomPartBase.IsDefaultValue(System.Double)">
+            <summary>
+            Returns true if the given value is set to the default value for this type.
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.CustomPartBase.IsDefaultValue(System.String)">
+            <summary>
+            Returns true if the given value is set to the default value (empty string).
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.CustomPartInputTypeAttribute">
+            <summary>
+            The CustomPartInputTypeAttribute class is used for defining the input type.
+            Based on the type the system will then ask for the correct number of input points in the creation.
+            The attribute is initialized from the custom attribute 
+                [CustomPartInputType(CustomPartBase.CustomPartInputType.INPUT_1_POINT)] 
+            in the custom part source code.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.CustomPartInputTypeAttribute.#ctor(Tekla.Structures.Plugins.CustomPartBase.CustomPartInputType)">
+            <summary>
+            The custom attribute uses this to store the input type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The custom input type.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.CustomPartInputTypeAttribute.Type">
+            <summary>
+            The custom attribute uses this to store the input type to the system. 
+            This is not to be used by itself.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.CustomPartInputTypeAttribute.#ctor(System.Int32)">
+            <summary>
+            The custom attribute uses this to store the input type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The custom part input type.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.CustomPartPositioningTypeAttribute">
+            <summary>
+            The CustomPartInputTypeAttribute class is used for defining the input type.
+            Based on the type the system will then position the custom part either based on calculated
+            extrema center point or given input points.
+            
+            The attribute is initialized from the custom attribute i.e.
+                [CustomPartPositioningType((CustomPartBase.CustomPartPositioningType.POSITIONING_BY_INPUTPOINTS)] 
+            in the custom part source code.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.CustomPartPositioningTypeAttribute.#ctor(Tekla.Structures.Plugins.CustomPartBase.CustomPartPositioningType)">
+            <summary>
+            The custom attribute uses this to store the positioning type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The custom part positioning type.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.CustomPartPositioningTypeAttribute.Type">
+            <summary>
+            The custom attribute uses this to store the positioning type to the system. 
+            This is not to be used by itself.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.CustomPartPositioningTypeAttribute.#ctor(System.Int32)">
+            <summary>
+            The custom attribute uses this to store the positioning type to the system. 
+            This is not to be used by itself.
+            </summary>
+            <param name="Type">The custom part positioning type.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.DrawingPluginBase">
+            <summary>
+            The DrawingPluginBase class is an abstract base class for drawing plug-ins.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.DrawingPluginBase.UpdateMode">
+            <summary>
+            Defines the update mode of the drawing plug-in.
+            The update mode tells the system when the plug-in is executed.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.DrawingPluginBase.UpdateMode.CREATE_ONLY">
+            <summary>
+            The plug-in is never updated.
+            Plug-ins are executed from the plug-in dialog instead of the component catalog.
+            The created objects do not have any relation to the plug-in anymore.
+            The plug-in dialog cannot be opened from the created objects.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.DrawingPluginBase.UpdateMode.INPUT_CHANGED">
+            <summary>
+            The plug-in is updated when the input is a point and the point is moved or when the input is an object and the object 
+            changes. The plug-in is executed when the input is an object and its properties are changed in the drawing editor.
+            This mode is the default which is used if the update mode is not defined in the plug-in source.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.DrawingPluginBase.UpdateMode.DRAWING_OPENED">
+            <summary>
+            The plug-in is updated also when a drawing is opened.
+            The plug-in is executed when the input is changed or during drawing opening.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.Run(System.Collections.Generic.List{Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition})">
+            <summary>
+            The main method of the plug-in. It is called after the input has been defined with 
+            DefineInput(). This is the "main" method of the plug-in and should contain all the actual
+            implementation.
+            </summary>
+            <param name="Input">An array list of the same format and order as what was returned from 
+            DefineInput().</param>
+            <returns>True on success.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.DefineInput">
+            <summary>
+            The method Tekla Structures calls for the plug-in to query the input.
+            The plug-in must then return an array list of input definition instances. The plug-in
+            will be dependent on the items it returns. Dependent means that if any of these
+            items change, for example the user moves the points, the plug-in will be re-run with new 
+            input. DefineInput is not called during the re-run, and thus all the actual implementation
+            should be in the Run() method. The Run() method is always called in view coordinates.
+            </summary>
+            <returns>An array list of input definition instances. If the plug-in is not dependent on input, it
+            should return an empty array list (not null).</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.IsDefaultValue(System.Int32)">
+            <summary>
+            Returns true if the given value is set to the default value for this type.
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.IsDefaultValue(System.Double)">
+            <summary>
+            Returns true if the given value is set to the default value for this type.
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.IsDefaultValue(System.String)">
+            <summary>
+            Returns true if the given value is set to the default value (empty string).
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition">
+            <summary>
+            The InputDefinition class is a class for defining the plug-in dependency over the input (points or identifiers).
+            The user implemented method DefineInput() of the DrawingPluginBase interface should return an array list of 
+            input definition instances. This defines the points and identifiers the plug-in will receive as input
+            when the Run() method is called.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.InputTypes">
+            <summary>
+            The possible input types for a drawing plug-in.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.InputTypes.INPUT_ONE_POINT">
+            <summary>
+            The input has one point.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.InputTypes.INPUT_TWO_POINTS">
+            <summary>
+            The input has two points.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.InputTypes.INPUT_THREE_POINTS">
+            <summary>
+            The input has three points.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.InputTypes.INPUT_N_POINTS">
+            <summary>
+            The input has multiple points.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.InputTypes.INPUT_ONE_OBJECT">
+            <summary>
+            The input has one drawing object. The supported drawing objects are bolts, parts and rebars.
+            Bolts, parts and rebars are drawing objects derived from model objects. The parts include the beam, the 
+            contour plate and the polybeam.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.Type">
+            <summary>
+            The type of the input the current instance contains.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.ViewId">
+            <summary>
+            The view object's identifier.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.Initialize">
+            <summary>
+            Initializes classes fields.
+            </summary>
+            <returns>Always true.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.#ctor">
+            <summary>
+            Base constructor. Initializes all fields. This should be called by all constructors.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.#ctor(Tekla.Structures.Identifier,Tekla.Structures.Geometry3d.Point)">
+            <summary>
+            Creates a new input definition instance with one point.
+            </summary>
+            <param name="point">The point.</param>
+            <param name="viewId">The identifier for the view object.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.#ctor(Tekla.Structures.Identifier,Tekla.Structures.Geometry3d.Point,Tekla.Structures.Geometry3d.Point)">
+            <summary>
+            Creates a new input definition instance with two points.
+            </summary>
+            <param name="point1">The first point.</param>
+            <param name="point2">The second point.</param>
+            <param name="viewId">The identifier for the view object.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.#ctor(Tekla.Structures.Identifier,Tekla.Structures.Geometry3d.Point,Tekla.Structures.Geometry3d.Point,Tekla.Structures.Geometry3d.Point)">
+            <summary>
+            Creates a new input definition instance with three points.
+            </summary>
+            <param name="point1">The first point.</param>
+            <param name="point2">The second point.</param>
+            <param name="point3">The third point.</param>
+            <param name="viewId">The identifier for the view object.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.#ctor(Tekla.Structures.Identifier,System.Collections.Generic.List{Tekla.Structures.Geometry3d.Point})">
+            <summary>
+            Creates a new input definition with multiple points.
+            </summary>
+            <param name="viewId">The view identifier.</param>
+            <param name="points">The points.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.#ctor(Tekla.Structures.Identifier,Tekla.Structures.Identifier)">
+            <summary>
+            Creates a new input definition instance with one identifier.
+            </summary>
+            <param name="viewId">The identifier for the view object.</param>
+            <param name="ObjectId">The object identifier.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.DrawingPluginBase.InputDefinition.GetInput">
+            <summary>
+            Returns the input Tekla Structures gave to the plug-in. The input is either a point instance,
+            an identifier instance, an array list of points or an array list of identifiers. This is based on the input
+            format returned from the DefineInput() method.
+            </summary>
+            <returns>The input to use in the Run() method.</returns>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.UpdateModeAttribute">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.UpdateModeAttribute.#ctor(Tekla.Structures.Plugins.DrawingPluginBase.UpdateMode)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Type"></param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.UpdateModeAttribute.Type">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.UpdateModeAttribute.#ctor(System.Int32)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Type"></param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginBase">
+            <summary>
+            The PluginBase class in an abstract base class for model plug-ins.
+            Model plug-ins have to be inherited from this class. Drawing plug-ins have to be 
+            inherited from the DrawingPluginBase.
+            <para>
+            A plug-in is always executed in the plug-in's local coordinate system.
+            The origin of the plug-in's coordinate system is defined based on
+            the first input object or point. In case the first input is an object,
+            the origin of the plug-in's coordinate system is the first input point of the object. 
+            In case the first input is a point, the origin of the plug-in's coordinate system is
+            the input point. The X- and Y-axes of the coordinate system are defined in the current plane.
+            </para>
+            </summary>
+            <example>
+            In the following example a .inp file is used for defining the dialog, because the designer code of the 
+            form is too large to present here. See this same plug-in implemented with Windows Forms in the Examples of the 
+            Start-Up package. The System.Windows.Forms namespace can be used starting from version 15.0.
+            See the PluginFormBase class in the Tekla.Structures.Dialog documentation for more information.
+            <code>
+            using System;
+            using System.Collections.Generic;
+            using Tekla.Structures.Plugins;
+            using Tekla.Structures.Geometry3d;
+            using Tekla.Structures.Model.UI;
+            using TSM = Tekla.Structures.Model;
+            
+            public class StructuresData 
+            {
+                   [Tekla.Structures.Plugins.StructuresField("P1")]
+                   public double Parameter1;
+            }
+            
+            [Plugin("BeamPlugin")] // Mandatory field which defines that this is the plug-in and stores the name of the plug-in to the system.
+            [PluginUserInterface(BeamPlugin.UserInterfaceDefinitions.Plugin1)] // Mandatory field which defines the user interface the plug-in uses. A Windows Forms class or a .inp file.
+            public class BeamPlugin: PluginBase
+            {
+                   private readonly StructuresData data;
+            
+                   // The constructor argument defines the database class StructuresData and sets the data to be used in the plug-in.
+                   public BeamPlugin(StructuresData data)
+                   {
+                       TSM.Model M = new TSM.Model();
+                       this.data = data;
+                   }
+            
+                   //Defines the inputs to be passed to the plug-in.
+                   public override List&lt;InputDefinition> DefineInput()
+                   {
+                       Picker BeamPicker = new Picker();
+                       List&lt;InputDefinition> PointList = new List&lt;InputDefinition>();
+            
+                       Point Point1 = BeamPicker.PickPoint();
+                       Point Point2 = BeamPicker.PickPoint();
+            
+                       InputDefinition Input1 = new InputDefinition(Point1);
+                       InputDefinition Input2 = new InputDefinition(Point2);
+                       PointList.Add(Input1);
+                       PointList.Add(Input2);
+            
+                       return PointList;
+                   }
+            
+                   //Main method of the plug-in.
+                   public override bool Run(List&lt;InputDefinition> Input)
+                   {
+                       try
+                       {
+                           Point Point1 = (Point)(Input[0]).GetInput();
+                           Point Point2 = (Point)(Input[1]).GetInput();
+                           Point LengthVector = new Point(Point2.X - Point1.X, Point2.Y - Point1.Y, Point2.Z - Point1.Z);
+                       
+                           if(data.Parameter1 > 0)
+                           {
+                               Point2.X = data.Parameter1 * LengthVector.X + Point1.X;
+                               Point2.Y = data.Parameter1 * LengthVector.Y + Point1.Y;
+                               Point2.Z = data.Parameter1 * LengthVector.Z + Point1.Z;
+                           }
+            
+                           CreateBeam(Point1, Point2);
+                       }
+                       catch(Exception)
+                       {
+                       }
+            
+                       return true;
+                   }
+            
+                   static void CreateBeam(Point Point1, Point Point2)
+                   {
+                       TSM.Beam MyBeam = new TSM.Beam(Point1, Point2);
+            
+                       MyBeam.Profile.ProfileString = "HEA400";
+                       MyBeam.Finish = "PAINT";
+                       MyBeam.Insert();
+                   }
+            
+                   //.inp file user interface definition, check the Start-Up package for the Windows Forms dialog presentation.
+                   public class UserInterfaceDefinitions
+                   {
+                       public const string Plugin1 = @"" +
+                       @"page(""TeklaStructures"","""")" + "\n" +
+                        "{\n" +
+                        "    plugin(1, BeamPlugin)\n" +
+                        "    {\n" +
+                       @"        tab_page(""Beam test"", ""Parametri_1"", 1)" + "\n" +
+                        "        {\n" +
+                       @"            parameter(""Length factor"", ""P1"", distance, number, 1)" + "\n" +
+                        "        }\n" +
+                        "    }\n" +
+                        "}\n";
+            
+                   }
+            }
+            </code>
+            </example>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase._Identifier">
+            <summary>
+            The identifier of the executable plug-in instance.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginBase.Identifier">
+            <summary>
+            The identifier of the executable plug-in instance.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginBase.InputDefinition">
+            <summary>
+            The InputDefinition class is a class for defining the plug-in dependency over the input (points or identifiers).
+            The user implemented method DefineInput() of the PluginBase interface should return an array list of 
+            input definition instances. This defines the points and identifiers the plug-in will receive as input
+            when the Run() method is called.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginBase.InputDefinition.InputTypeEnum">
+            <summary>
+            The possible input types for a plug-in.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputDefinition.InputTypeEnum.INPUT_ONE_POINT">
+            <summary>
+            The input is one point (x,y,z).
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputDefinition.InputTypeEnum.INPUT_TWO_POINTS">
+            <summary>
+            The input is two points.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputDefinition.InputTypeEnum.INPUT_POLYGON">
+            <summary>
+            The input is multiple points.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputDefinition.InputTypeEnum.INPUT_ONE_OBJECT">
+            <summary>
+            The input is one ID of any type.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputDefinition.InputTypeEnum.INPUT_N_OBJECTS">
+            <summary>
+            The input is N IDs of any type.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.InputDefinition.#ctor(Tekla.Structures.Geometry3d.Point)">
+            <summary>
+            Creates a new input definition instance with one point.
+            </summary>
+            <param name="Point">The point.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.InputDefinition.#ctor(Tekla.Structures.Geometry3d.Point,Tekla.Structures.Geometry3d.Point)">
+            <summary>
+            Creates a new input definition instance with two points.
+            </summary>
+            <param name="P1">The first point.</param>
+            <param name="P2">The second point.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.InputDefinition.#ctor(System.Collections.ArrayList)">
+            <summary>
+            Creates a new input definition instance with multiple point or identifier instances.
+            </summary>
+            <param name="_Input">A list of either points or identifiers.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.InputDefinition.#ctor(Tekla.Structures.Identifier)">
+            <summary>
+            Creates a new input definition instance with one identifier.
+            </summary>
+            <param name="ID">The model object identifier.</param>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.InputDefinition.GetInputType">
+            <summary>
+            Returns the type of the input the current instance contains.
+            </summary>
+            <returns>The type of the input.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.InputDefinition.GetInput">
+            <summary>
+            Returns the input Tekla Structures gave to the plug-in. The input is either a point instance,
+            an identifier instance, an array list of points or an array list of identifiers. This is based on the input
+            format returned from the DefineInput() method.
+            </summary>
+            <returns>The input to use in the Run() method.</returns>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginBase.InputObjectDependency">
+            <summary>
+            Defines the input object dependency type for model plug-ins.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputObjectDependency.NOT_DEPENDENT">
+            <summary>
+            No dependency on input. Typically this type is applied to the import and export functionality.
+            Not-dependent plug-ins are executed from the plug-in dialog instead of the component catalog.
+            The created objects do not have any relation to the plug-in anymore.
+            The plug-in dialog cannot be opened from the created objects.
+            Note! The system does not automatically save a rollback point to the database for non-dependent plug-ins. 
+            If new objects are created, CommitChanges needs to be called at the end of the Run method.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputObjectDependency.DEPENDENT">
+            <summary>
+            Dependent on input.
+            The plug-in is executed if e.g. the definition points or the profile of the input part change.
+            Boolean operations to the input part do not cause plug-in execution.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputObjectDependency.GEOMETRICALLY_DEPENDENT">
+            <summary>
+            Geometrically dependent on input.
+            The plug-in is executed if the input part geometry changes i.e. if the input part is fitted.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.InputObjectDependency.NOT_DEPENDENT_MODIFIABLE">
+            <summary>
+            No dependency on input but the instance is modifiable in the model.
+            The created objects have a relation to the plug-in.
+            The plug-in dialog can be opened from the created objects.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginBase.CoordinateSystemType">
+            <summary>
+            Defines the coordinate system type for model plug-ins which are using points as an input.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.CoordinateSystemType.FROM_FIRST_POINT_AND_GLOBAL">
+            <summary>
+            Plugin coordinate system is calculated from first input point defining the origin 
+            and global coordinates which defines x and y-direction.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.CoordinateSystemType.FROM_FIRST_AND_SECOND_POINT">
+            <summary>
+            Plugin coordinate system is calculated from first input point defining the origin and 
+            second input point which defines x-direction.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginBase.SymbolVisibility">
+            <summary>
+            Defines the symbol visibility for model plug-ins in model views. 
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.SymbolVisibility.DRAW_SYMBOL">
+            <summary>
+            Symbol is visible in model view. 
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Plugins.PluginBase.SymbolVisibility.DO_NOT_DRAW_SYMBOL">
+            <summary>
+            Symbol is not drawn to model view. Plug-in must be selected from the view using created objects only.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.Run(System.Collections.Generic.List{Tekla.Structures.Plugins.PluginBase.InputDefinition})">
+            <summary>
+            The main method of the plug-in. It is called after the input has been defined with 
+            DefineInput(). This is the "main" method of the plug-in and should contain all the actual
+            implementation.
+            </summary>
+            <param name="Input">A list of the same format and order as what was returned from 
+            DefineInput().</param>
+            <returns>True on success.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.DefineInput">
+            <summary>
+            The method Tekla Structures calls for the plug-in to query the input.
+            The plug-in must then return a list of input definition instances. The plug-in
+            will be dependent on the items it returns. Dependent means that if any of these
+            items change, for example the user moves the points, the plug-in will be re-run with new 
+            input. DefineInput is not called during the re-run, and thus all the actual implementation
+            should be in the Run() method.
+            The maximum number of InputDefinitions in the List is 10.
+            </summary>
+            <returns>A list of input definition instances. If the plug-in is not dependent on input, it
+            should return an empty list (not null).</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.IsDefaultValue(System.Int32)">
+            <summary>
+            Returns true if the given value is set to the default value for this type.
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.IsDefaultValue(System.Double)">
+            <summary>
+            Returns true if the given value is set to the default value for this type.
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginBase.IsDefaultValue(System.String)">
+            <summary>
+            Returns true if the given value is set to the default value (empty string).
+            </summary>
+            <param name="Value">The value to test.</param>
+            <returns>True if the value is set to the default.</returns>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginAttribute">
+            <summary>
+            The PluginAttribute class is used for storing the name of the plug-in to the system.
+            The attribute is initialized from the custom attribute [Plugin("PluginName")] in the plug-in source.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginAttribute.#ctor(System.String)">
+            <summary>
+             The custom attribute [Plugin("PluginName")] uses this to store the name to the system. 
+             This is not to be used by itself.
+            </summary>
+            <param name="name">The name of the plug-in.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginAttribute.Name">
+            <summary>
+             The name of the plug-in in the system.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginUserInterfaceAttribute">
+            <summary>
+            The PluginUserInterfaceAttribute class is used for storing the description of the plug-in user interface to the system.
+            The attribute is initialized from the custom attribute [PluginUserInterface(PluginName.UserInterfaceDefinitions.Plugin1)] in the plug-in source.
+            In this case the description string Plugin1 is a dialog written in inp format. 
+            If the plug-in dialog is inherited from the PluginFormBase the description string contains a class name of the dialog i.e. [PluginUserInterface("Model_Plug_in1.MainForm")]. 
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginUserInterfaceAttribute.#ctor(System.String)">
+            <summary>
+             The custom attribute [PluginUserInterface(PluginName.UserInterfaceDefinitions.Plugin1)] uses this to store the description of the plug-in user interface to the system. 
+             This is not to be used by itself.
+            </summary>
+            <param name="description">The description of the plug-in user interface in inp format or the name of the dialog class for the PluginFormBase dialog.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginUserInterfaceAttribute.Description">
+            <summary>
+             The description of the plug-in user interface in inp format.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginNameAttribute">
+            <summary>
+            Not supported at the moment.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginNameAttribute.#ctor(System.String,System.String)">
+            <summary>
+            Not supported at the moment.
+            </summary>
+            <param name="language">Not supported at the moment.</param>
+            <param name="name">Not supported at the moment.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginNameAttribute.Language">
+            <summary>
+            Not supported at the moment.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginNameAttribute.Name">
+            <summary>
+            Not supported at the moment.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginDescriptionAttribute">
+            <summary>
+            Not supported at the moment.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginDescriptionAttribute.#ctor(System.String,System.String)">
+            <summary>
+            Not supported at the moment.
+            </summary>
+            <param name="description">Not supported at the moment.</param>
+            <param name="language">Not supported at the moment.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginDescriptionAttribute.Language">
+            <summary>
+            Not supported at the moment.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginDescriptionAttribute.Description">
+            <summary>
+            Not supported at the moment.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.StructuresFieldAttribute">
+            <summary>
+            The StructuresFieldAttribute class is used for mapping a database attribute to a data field that the plug-in uses in execution.
+            The attribute is initialized from the custom attribute [StructuresField(attributeName)] in the plug-in source.
+            In the plug-in the data field must be public and the type must be double, integer or string.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.StructuresFieldAttribute.#ctor(System.String)">
+            <summary>
+             The custom attribute [StructuresField(attributeName)] uses this to map a database attribute to a data field that the plug-in uses in execution. 
+             This is not to be used by itself.
+            </summary>
+            <param name="attributeName">The name of the attribute.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.StructuresFieldAttribute.AttributeName">
+            <summary>
+            The name of the attribute.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.InputObjectDependencyAttribute">
+            <summary>
+            The InputObjectDependencyAttribute class is used for storing an input object dependency which determines when the plug-in is updated in the system.
+            The attribute is initialized from the custom attribute [InputObjectDependency(PluginBase.InputObjectDependency Type)] in the plug-in source.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.InputObjectDependencyAttribute.#ctor(Tekla.Structures.Plugins.PluginBase.InputObjectDependency)">
+            <summary>
+             The custom attribute [InputObjectDependency(PluginBase.InputObjectDependency Type)] uses this to store a dependency attribute which determines when the plug-in is updated in the system.
+             This is not to be used by itself.
+            </summary>
+            <param name="Type">The type of the input object dependency.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.InputObjectDependencyAttribute.Type">
+            <summary>
+             Returns the type of the input object dependency.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.InputObjectDependencyAttribute.#ctor(System.Int32)">
+            <summary>
+             The custom attribute [InputObjectDependency(PluginBase.InputObjectDependency Type)] uses this to store a dependency attribute which determines when the plug-in is updated in the system.
+             This is not to be used by itself.
+            </summary>
+            <param name="Type">The type of the input object dependency as an integer.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginCoordinateSystemAttribute">
+            <summary>
+            The PluginCoordinateSystemAttribute class is used for defining  the coordinate system type for model plug-ins which are using points as an input.
+            The attribute is initialized from the custom attribute [PluginCoordinateSystem(PluginBase.CoordinateSystemType Type)] in the plug-in source.
+            If attribute is not defined or attribute has value PluginBase.CoordinateSystemType.FROM_FIRST_POINT_AND_GLOBAL coordinate system is calculated as earlier.
+            The attribute is used if the first Inputdefinition object contains at least two points (defined by two points, line, face or polygon).
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginCoordinateSystemAttribute.#ctor(Tekla.Structures.Plugins.PluginBase.CoordinateSystemType)">
+            <summary>
+             The custom attribute used to define coordinate system of the plug-in.
+             This is not to be used by itself.
+            </summary>
+            <param name="Type">The type of the input object dependency.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginCoordinateSystemAttribute.Type">
+            <summary>
+             Returns the type of the input object dependency.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginCoordinateSystemAttribute.#ctor(System.Int32)">
+            <summary>
+             The custom attribute used to define coordinate system of the plug-in.
+             This is not to be used by itself.
+            </summary>
+            <param name="Type">The type of the input object dependency as an integer.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginSymbolVisiblityAttribute">
+            <summary>
+            The PluginSymbolVisiblityAttribute class is used for defining the symbol visibility for model plug-ins.
+            The attribute is initialized from the custom attribute [PluginSymbolVisiblity(PluginBase.SymbolVisibility Type)] in the plug-in source.
+            If attribute is not defined or attribute has value PluginBase.SymbolVisibility.DRAW_SYMBOL plug-in symbol is drawn normally.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginSymbolVisiblityAttribute.#ctor(Tekla.Structures.Plugins.PluginBase.SymbolVisibility)">
+            <summary>
+             The custom attribute used to define coordinate system of the plug-in.
+             This is not to be used by itself.
+            </summary>
+            <param name="Type">The type of the input object dependency.</param>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginSymbolVisiblityAttribute.Type">
+            <summary>
+             Returns the type of the input object dependency.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginSymbolVisiblityAttribute.#ctor(System.Int32)">
+            <summary>
+             The custom attribute used to define coordinate system of the plug-in.
+             This is not to be used by itself.
+            </summary>
+            <param name="Type">The type of the input object dependency as an integer.</param>
+        </member>
+        <member name="T:Tekla.Structures.Plugins.PluginPropertyFileLocationAttribute">
+            <summary>Used to specify file location for a property file.</summary>
+        </member>
+        <member name="M:Tekla.Structures.Plugins.PluginPropertyFileLocationAttribute.#ctor(System.String,System.String)">
+            <summary>Initializes a new instance of the <see cref="T:Tekla.Structures.Plugins.PluginPropertyFileLocationAttribute"/> class, for a file with provided filename suffix.</summary>
+            <param name="suffix">File suffix to register. Must contain the dot, such as ".ExamplePlugin.Data.txt". Should be as specific as possible.</param>
+            <param name="subdirectory">The model folder subdirectory where the attribute should be searched for.</param>
+             Currently supported values for <c>subdirectory</c> are:
+            <list type="bullet">
+                <item>
+                    <description>"" - the file is located in the model folder.</description>
+                </item>
+                <item>
+                    <description>"attributes" - the file is located in the model folder's "attributes" subfolder.</description>
+                </item>
+            </list>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginPropertyFileLocationAttribute.Suffix">
+            <summary>Gets the property file suffix.</summary>
+        </member>
+        <member name="P:Tekla.Structures.Plugins.PluginPropertyFileLocationAttribute.Subdirectory">
+            <summary>Gets the property file subdirectory in a model folder.</summary>
+        </member>
+        <member name="T:Tekla.Structures.Internal.ITsInvoker">
+            <summary>
+            Interface method for Plugin Invoker
+            To avoid direct reference of Tekla.Technology.Scripting, use this interface for using Invoker functionality
+            and inject an implementation of ITsInvoker
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.Internal.ITsInvoker.AppDomainFriendlyName">
+            <summary>
+            application domain friendly name
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.Load(System.String)">
+            <summary>
+            Load assembly 
+            </summary>
+            <param name="assemblyName"> Assembly name</param>
+            <returns>loaded assembly</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.LoadFrom(System.String)">
+            <summary>
+            Loads assembly from provided file name
+            </summary>
+            <param name="assemblyFileName"> Assembly file name</param>
+            <returns>loaded assembly</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.CreateInstance(System.String,System.String,System.Object[])">
+            <summary>
+            Creates instance of Ivoker
+            </summary>
+            <param name="assemblyName">Assembly name</param>
+            <param name="typeName"> assembly type name</param>
+            <param name="parameters">parameters</param>
+            <returns>invoker object</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.CreatePermanentInstance(System.String,System.String,System.Object[])">
+            <summary>
+            creates permanent instance
+            </summary>
+            <param name="assemblyName"> Assembly name</param>
+            <param name="typeName">type name</param>
+            <param name="parameters">parameters</param>
+            <returns>invoker object</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.FreePermanentInstance(System.Object)">
+            <summary>
+            Frees invoer instance
+            </summary>
+            <param name="instance">instance to free</param>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.Invoke(System.String,System.String,System.String,System.Object[])">
+            <summary>
+            Invokes a method with parameters in the assembly name provided
+            </summary>
+            <param name="assemblyName">assembly name</param>
+            <param name="typeName">type name</param>
+            <param name="methodName">method name</param>
+            <param name="parameters">parameters</param>
+            <returns>invoker object</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.Invoke(System.Object,System.String,System.Object[])">
+            <summary>
+            Invokes a method with parameters in the target provided
+            </summary>
+            <param name="target">Target where method needs to be invoked</param>
+            <param name="methodName">method name</param>
+            <param name="parameters">parameters</param>
+            <returns>invoker object</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.InvokeMember(System.String,System.String,System.String,System.Reflection.BindingFlags,System.Object[])">
+            <summary>
+            Invokes a member with parameters in the assembly provided
+            </summary>
+            <param name="assemblyName">assembly name</param>
+            <param name="typeName">type name</param>
+            <param name="memberName">member name</param>
+            <param name="invokeFlags">invoke flags</param>
+            <param name="parameters">parameters</param>
+            <returns>Invoker object</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.InvokeMember(System.Object,System.String,System.Reflection.BindingFlags,System.Object[])">
+            <summary>
+            Invokes a member with parameters in the target provided
+            </summary>
+            <param name="target">target</param>
+            <param name="memberName">member name</param>
+            <param name="invokeFlags">invoke flags</param>
+            <param name="parameters">parameters</param>
+            <returns>Invoker object</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.GetTypeNames(System.String)">
+            <summary>
+            Get type names in the assembly
+            </summary>
+            <param name="assemblyName">assembly name</param>
+            <returns>type names</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.GetMethodNames(System.String,System.String)">
+            <summary>
+            Get method names in the assembly
+            </summary>
+            <param name="assemblyName">assemblly name</param>
+            <param name="typeName">type name</param>
+            <returns>method names</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.GetAssemblyLocation(System.String)">
+            <summary>
+            Gets assembly location
+            </summary>
+            <param name="assemblyName">assembly name</param>
+            <returns>assembly location</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ITsInvoker.IsSubclass(System.String,System.String,System.String,System.String)">
+            <summary>
+            IsSubclass
+            </summary>
+            <param name="assemblyName">assembly name</param>
+            <param name="typeName">type name</param>
+            <param name="parentAssemblyName">parent Assembly Name</param>
+            <param name="parentTypeName"> parent Type Name </param>
+            <returns>IsSubClass or not</returns>
+        </member>
+        <member name="T:Tekla.Structures.Internal.ConnectionHelper">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ConnectionHelper.AddPlugin(Tekla.Structures.Internal.StructuresPluginDescriptor)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="structuresPlugin"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ConnectionHelper.SetCurrentPlugin(Tekla.Structures.Internal.ITsInvoker,System.Object)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Invoker"></param>
+            <param name="currentPlugin"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ConnectionHelper.GetCurrentPlugin">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ConnectionHelper.DefineInput">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ConnectionHelper.Run">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.ConnectionHelper.GetInputFromCore">
+            <summary>
+            TODO: This should be refactored, since it's exactly the same as in ModelPluginHelper.
+            </summary>
+            <returns>List of input items for the plugin</returns>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotConnectionType_t">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionType_t.IsConnection">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionType_t.SecondaryType">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionType_t.InputObjectType">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionType_t.PositionType">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionType_t.DetailType">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionType_t.AutoDirectionType">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionType_t.SeamInputType">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Internal.CustomPartHelper">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.CustomPartHelper.AddPlugin(Tekla.Structures.Internal.StructuresPluginDescriptor)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="structuresPlugin"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.CustomPartHelper.SetCurrentPlugin(Tekla.Structures.Internal.ITsInvoker,System.Object)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Invoker"></param>
+            <param name="currentPlugin"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.CustomPartHelper.GetCurrentPlugin">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.CustomPartHelper.DefineInput">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.CustomPartHelper.Run">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.CustomPartHelper.GetInputFromCore">
+            <summary>
+            TODO: This should be refactored, since it's exactly the same as in ModelPluginHelper.
+            </summary>
+            <returns>List of input items for the plugin</returns>
+        </member>
+        <member name="T:Tekla.Structures.Internal.StructuresDataStorageBase">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresDataStorageBase.GetVariables(System.String[])">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="names"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresDataStorageBase.GetVariable(System.String)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="name"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresDataStorageBase.InitializeLifetimeService">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Tekla.Structures.Internal.DataStorage">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.DataStorage.Init(Tekla.Structures.Internal.StructuresDataStorageBase)">
+            <summary>
+            Sets the StructuresDataStorage to be used in plugin.
+            </summary>
+            <param name="s">Data storage</param>
+        </member>
+        <member name="M:Tekla.Structures.Internal.DataStorage.WriteTo(System.Object)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="pluginDataClass"></param>
+        </member>
+        <member name="M:Tekla.Structures.Internal.DataStorage.GetAllPluginDataFields(System.Object)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.DataStorage.ReadFrom(System.Object)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="pluginDataClass"></param>
+        </member>
+        <member name="T:Tekla.Structures.Internal.Magic">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Magic.#ctor">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Magic.CreateCorrectInstanceFromAssembly(System.String,System.String)">
+            <summary>
+            Creates instance of given type from given assembly, 
+            and creates instances of constructor parameters and stores them to this class
+            </summary>
+            <param name="AssemblyName"></param>
+            <param name="TypeName"></param>
+            <returns>instance of given type</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Magic.WriteParametersToCurrentDataStorageInstance">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Magic.ReadParametersFromCurrentDataStorageInstance">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.ModelPluginHelper.MAX_INPUTDEFINITIONS">
+            <summary>
+            Maximum number of input definitions.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Internal.PluginHelper">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.PluginHelper.StructuresPlugin">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.PluginHelper.Invoker">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.PluginHelper.InputThread">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.GetCorrectInstance(Tekla.Structures.Internal.StructuresPluginDescriptor)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.CreateInputThread(System.Boolean)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.StartInputThread(System.Boolean)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.GetInvoker">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.Finish">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.Cancel">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.Internal.PluginHelper.InvokerDisposer">
+            <summary>
+            This class handles the case when a plugin input thread is cancelled.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.BeginInvoke(System.Delegate,System.Object[])">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="method"></param>
+            <param name="args"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.EndInvoke(Tekla.Structures.Internal.dotPluginInput_t@,System.IAsyncResult)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="pInput"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.EndInvoke(Tekla.Structures.Internal.dotPluginDefinition_t@,System.IAsyncResult)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="pDefinition"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.EndInvoke(Tekla.Structures.Internal.dotPluginClient_t@,System.IAsyncResult)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.AddPlugin(Tekla.Structures.Internal.StructuresPluginDescriptor)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="structuresPlugin"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.SetCurrentPlugin(Tekla.Structures.Internal.ITsInvoker,System.Object)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Invoker"></param>
+            <param name="currentPlugin"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.GetCurrentPlugin">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.DefineInput">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.Run">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.PluginHelper.GetInputFromCore">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotClientId_t">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotClientId_t.ProcessId">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotClientId_t.ThreadId">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.dotClientId_t.GetClientId">
+            <summary>
+            Get unique client id for application.
+            Client id must be used with sequential queries, like
+            object enumeration.
+            </summary>
+            <returns>Client id</returns>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotPluginClient_t">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginClient_t.ClientId">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotPluginInput_t">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.AllInputSet">
+            <summary>
+            Indicates that input is ALL done, we can call run
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.Type">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.MoreObjectsLeft">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.InputSequence">
+            <summary>
+            Sequence number of input: 0, 1, 2...
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.nObjectToStart">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.ViewId">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.IDs">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.NumItems">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.aPointX">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.aPointY">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.aPointZ">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginInput_t.ClientId">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.Internal.dotPluginInput_t.#ctor(System.Int32)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Size"></param>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotPluginDefinition_t">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.Name">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.UIDescription">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.AssemblyName">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.DependencyType">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.IsCustomPart">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.CustomPartInputType">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.CoordinateSystemType">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.CustomPartPositioningType">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginDefinition_t.SymbolVisibilityType">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotPluginName_t">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginName_t.Name">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotPluginBaseDirectory_t">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginBaseDirectory_t.PluginBaseDirectory">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotConnectionCode_t">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionCode_t.ID">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotConnectionCode_t.Code">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.Internal.Plugins">
+            <summary>
+            Plugins data
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.Plugins.pluginManager">
+            <summary>
+            Plugin Manager, there's only one instance
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.Plugins.pluginStack">
+            <summary>
+            Stack of plugins (in case of nested plugins)
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.Plugins.currentHelper">
+            <summary>
+            Current plugin instance wrapper
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.Plugins.useDefaultAppDomain">
+            <summary>
+            The use default application domain
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.Plugins.loadedPluginAssemblies">
+            <summary>
+            Plugin assemblies loaded to default appdomain in Assembly.LoadFrom() context.
+            Used only if UseDefaultAppDomain is true.
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.Plugins.loadedPluginAssemblyNames">
+            <summary>
+            Plugin assembly names loaded to default appdomain in Assembly.LoadFrom() context.
+            Used only if UseDefaultAppDomain is true.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.Internal.Plugins.CreateInvokerDelegate">
+            <summary>
+            Delegate to create invoker
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.LoadPluginAssembly(System.String)">
+            <summary>
+            Loads the plugin assembly from the disc or returns it from memory if it's already been loaded.
+            </summary>
+            <param name="pluginAssemblyLocation">The plugin assembly location.</param>
+            <returns>returns assembly</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.GetPluginFormFullName(System.String,System.String@)">
+            <summary>
+            Gets the complete name of the PluginForm of the Plugin.
+            </summary>
+            <param name="pluginName">Name of the plugin.</param>
+            <param name="pluginFormFullName">Complete name of the plugins form, null if it does not have one.</param>
+            <returns>true if the name has been found, otherwise false</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.GetPluginNameFromFormFullName(System.String,System.String@)">
+            <summary>
+            Gets the complete name of the PluginForm of the Plugin.
+            </summary>
+            <param name="pluginName">Name of the plugin.</param>
+            <param name="pluginFormFullName">Complete name of the plugins form, null if it does not have one.</param>
+            <returns>true if the name has been found, otherwise false</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.GetPluginBaseDirectory">
+            <summary>
+            Retrieves the path to the Plugin folder which resides beneath TeklaStructures folder.
+            </summary>
+            <returns>The complete path or empty string if no plugin path existed.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.GetExtensionsDirectories">
+            <summary>
+            Retrieves the path to the Extensions folder which resides in defined extension folder.
+            </summary>
+            <returns>The complete path or empty string if no extensions path existed.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.GetDefaultExtensionsFolder">
+            <summary>
+            Retrieves the default path to the extensions.
+            </summary>
+            <returns>The complete path or empty string if no extensions path existed.</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.IsDrawingPlugin(System.String)">
+            <summary>
+            Checks if the plugin defined by the given PluginName is a drawing plugin or not.
+            </summary>
+            <param name="pluginName">The name of the plugin.</param>
+            <returns>True if the plugin is a drawing plugin otherwise false</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.IsConnectionPlugin(System.String)">
+            <summary>
+            Checks if the plugin defined by the given PluginName is a connection plugin or not.
+            </summary>
+            <param name="pluginName">The name of the plugin.</param>
+            <returns>True if the plugin is a connection plugin otherwise false</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.GetAssemblyNameToLoad(System.String)">
+            <summary>
+            Gets the assembly name to load.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.LoadPlugins">
+            <summary>
+            Loads the plugins.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.ReadPlugins">
+            <summary>
+            Reads the plugins.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.SearchForTpackExtensions(System.String)">
+            <summary>
+            Requests TPack system for TeklaPlugin type of dlls
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.SearchForPlugins(System.String,System.String)">
+            <summary>
+            Scan for Plugins
+            </summary>
+            <param name="xsbin">the xsbin path</param>
+            <param name="pluginBaseDirectory">The base directory for plugins</param>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.SearchForExtensions(System.String)">
+            <summary>
+            Scan for Extensions
+            </summary>
+            <param name="xsbin">the xsbin path</param>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.GetStructuresPluginDescriptor(System.String)">
+            <summary>
+            Gets the structures plugin descriptor.
+            </summary>
+            <param name="PluginName">Name of the plugin.</param>
+            <returns>plugin descripto</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.InstantiatePlugin(System.String,System.Object@,Tekla.Structures.Internal.ITsInvoker@,Tekla.Structures.Internal.Plugins.CreateInvokerDelegate)">
+            <summary>
+            Instantiates the plugin.
+            </summary>
+            <param name="PluginName">Name of the plugin.</param>
+            <param name="plugin">The plugin.</param>
+            <param name="Invoker">TS Invoker.</param>
+            <param name="CreateInvoker">CreateInvoker Delagate</param>
+            <returns>ok or not</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.InstantiateAndSetAsCurrentPlugin(System.String,Tekla.Structures.Internal.Plugins.CreateInvokerDelegate)">
+            <summary>
+            Instantiates the and set as current plugin.
+            </summary>
+            <param name="PluginName">Name of the plugin.</param>
+            <param name="CreateInvoker"> CreateInvoker dalegate</param>
+            <returns>ok or no</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.CancelCurrentPlugin">
+            <summary>
+            Cancels the current plugin.
+            </summary>
+            <returns>1 if ok</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.InitializePluginManager">
+            <summary>
+            Initializes the plugin manager.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.ResetCurrentPlugin">
+            <summary>
+            Resets Current plugin
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.RunCurrent">
+            <summary>
+            Runs the currently set plugin
+            </summary>
+            <returns>success/failure</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.DefinePluginInput(System.Boolean)">
+            <summary>
+            Define plugin input
+            </summary>
+            <returns>success/failure</returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.Plugins.Run(System.String)">
+            <summary>
+            Runs the specified parameter.
+            </summary>
+            <param name="param">The parameter.</param>
+            <returns>return result</returns>
+        </member>
+        <member name="T:Tekla.Structures.Internal.StructuresDataStorage">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.StructuresDataStorage.DEFAULT_VALUE">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresDataStorage.#ctor">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresDataStorage.GetVariables(System.String[])">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="names"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresDataStorage.GetVariables">
+            <summary>
+            DO NOT USE! For internal usage only!
+            This is a temporary hack that gives direct manipulation API access to current values for .NET Plugins.
+            The functionality should be re-written and moved to Tekla.Structures.Dialog (from Plugins)
+            when we need to extend it in any way.
+            </summary>
+            <returns>A dictionary containing the variables and their values. </returns>
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresDataStorage.GetVariable(System.String)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="name"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotPluginAttributesInt_t">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.MoreObjectsLeft">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.nObjectToStart">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.NumItems">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.Values">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName0">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName1">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName2">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName3">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName4">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName5">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName6">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName7">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName8">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesInt_t.aName9">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.dotPluginAttributesInt_t.#ctor(System.Int32)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Size"></param>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotPluginAttributesDouble_t">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.MoreObjectsLeft">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.nObjectToStart">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.NumItems">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.Values">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName0">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName1">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName2">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName3">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName4">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName5">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName6">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName7">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName8">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesDouble_t.aName9">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.dotPluginAttributesDouble_t.#ctor(System.Int32)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Size"></param>
+        </member>
+        <member name="T:Tekla.Structures.Internal.dotPluginAttributesString_t">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.MoreObjectsLeft">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.nObjectToStart">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.NumItems">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue0">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue1">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue2">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue3">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue4">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue5">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue6">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue7">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue8">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aValue9">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName0">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName1">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName2">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName3">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName4">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName5">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName6">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName7">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName8">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.Internal.dotPluginAttributesString_t.aName9">
+            <summary>
+            Name of the property
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.Internal.dotPluginAttributesString_t.#ctor(System.Int32)">
+            <summary>
+            DO NOT USE! For internal usage only!
+            </summary>
+            <param name="Size"></param>
+        </member>
+        <member name="T:Tekla.Structures.Internal.StructuresPluginDescriptor">
+            <exclude />
+        </member>
+        <member name="F:Tekla.Structures.Internal.StructuresPluginDescriptor._baseType">
+            <exclude />
+        </member>
+        <member name="F:Tekla.Structures.Internal.StructuresPluginDescriptor._userInterfaceDescription">
+            <exclude />
+        </member>
+        <member name="F:Tekla.Structures.Internal.StructuresPluginDescriptor._magicDict">
+            <exclude />
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresPluginDescriptor.#ctor(System.String,System.String,System.Type,System.Collections.Generic.IDictionary{System.Type,System.Attribute[]})">
+            <exclude />
+        </member>
+        <member name="P:Tekla.Structures.Internal.StructuresPluginDescriptor.Name">
+            <exclude />
+        </member>
+        <member name="P:Tekla.Structures.Internal.StructuresPluginDescriptor.UserInterfaceDescription">
+            <exclude />
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresPluginDescriptor.CreateInstance(Tekla.Structures.Internal.ITsInvoker,Tekla.Structures.Internal.StructuresDataStorageBase)">
+            <exclude />
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresPluginDescriptor.GetAllParameters(System.Collections.Generic.Dictionary{System.String,System.Reflection.FieldInfo}@)">
+            <exclude />
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresPluginDescriptor.ReadParametersFromInstance(System.Object)">
+            <exclude />
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresPluginDescriptor.WriteParametersToInstance(System.Object)">
+            <exclude />
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresPluginDescriptor.FinishInstance(System.Object)">
+            <exclude />
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresPluginDescriptor.ToString">
+            <exclude />
+        </member>
+        <member name="M:Tekla.Structures.Internal.StructuresPluginDescriptor.RebuildRemoteObjectDictionary(System.Collections.IDictionary)">
+            <summary>
+            Rebuilds the remote object dictionary so that only alive objects are left in it.
+            </summary>
+            <param name="dictionary">The dictionary to rebuild.</param>
+        </member>
+        <member name="T:Tekla.Structures.Internal.StructuresMetadataLoader">
+            <Summary>
+             Structures MetadataLoader class
+            </Summary>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.CDelegate">
+            <summary>
+            CDelegate includes all the platform invoke commands user process can call.
+            It uses CDelegateSynchronized to deliver the calls to C-interface.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.CDelegate.Singletons">
+            <summary>
+            Storage class for singleton instances.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegate.Singletons.#cctor">
+            <summary>
+            Explicit static constructor to tell C# compiler
+            not to mark type as beforefieldinit. Do not remove.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.CDelegateSynchronized">
+            <summary>
+            CDelegateSynchronized includes all the platform invokable commands and synchronization to AKIT.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportGetPluginBaseDirectory(Tekla.Structures.Internal.dotPluginBaseDirectory_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportGetPluginName(Tekla.Structures.Internal.dotPluginName_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportGetPluginId">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportSetPluginResult(System.Int32)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportExecutePluginResult(System.Int32)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportGetConnectionCode(Tekla.Structures.Internal.dotConnectionCode_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportSetConnectionCode(Tekla.Structures.Internal.dotConnectionCode_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportGetPluginIntAttributes(Tekla.Structures.Internal.dotPluginAttributesInt_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportGetPluginDoubleAttributes(Tekla.Structures.Internal.dotPluginAttributesDouble_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportGetPluginStringAttributes(Tekla.Structures.Internal.dotPluginAttributesString_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.DrawingExportAddPlugin(Tekla.Structures.Internal.dotPluginDefinition_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.DrawingExportGetPluginInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.DrawingExportSetPluginInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.DrawingExportCurrentDefineInputClientId(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.DrawingExportDefineInputCompleted(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.DrawingExportPluginRunCompleted(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportAddPlugin(Tekla.Structures.Internal.dotPluginDefinition_t@,Tekla.Structures.Internal.dotConnectionType_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportGetInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportSetInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.ExportSignalInputEnded">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportGetPluginBaseDirectory(Tekla.Structures.Internal.dotPluginBaseDirectory_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportGetPluginName(Tekla.Structures.Internal.dotPluginName_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportGetPluginId">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportSetPluginResult(System.Int32)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportExecutePluginResult(System.Int32)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportGetConnectionCode(Tekla.Structures.Internal.dotConnectionCode_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportSetConnectionCode(Tekla.Structures.Internal.dotConnectionCode_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportGetPluginIntAttributes(Tekla.Structures.Internal.dotPluginAttributesInt_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportGetPluginDoubleAttributes(Tekla.Structures.Internal.dotPluginAttributesDouble_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportGetPluginStringAttributes(Tekla.Structures.Internal.dotPluginAttributesString_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotGrExportAddPlugin(Tekla.Structures.Internal.dotPluginDefinition_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotGrExportGetPluginInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotGrExportSetPluginInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotGrExportCurrentDefineInputClientId(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotGrExportDefineInputCompleted(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotGrExportPluginRunCompleted(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportAddPlugin(Tekla.Structures.Internal.dotPluginDefinition_t@,Tekla.Structures.Internal.dotConnectionType_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportGetInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportSetInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateSynchronized.dotExportSignalPluginInputEnded">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.CDelegateWrapper">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.PluginsInternal.CDelegateWrapper._Instance">
+            <exclude/>
+        </member>
+        <member name="F:Tekla.Structures.PluginsInternal.CDelegateWrapper._Functionality">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.#ctor(Tekla.Structures.PluginsInternal.ICDelegate,Tekla.Structures.Internal.WrapperFunctionalityBase)">
+            <exclude/>
+            <param name="Instance"></param>
+            <param name="Functionality"></param>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportGetPluginId">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportSetPluginResult(System.Int32)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportExecutePluginResult(System.Int32)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportGetConnectionCode(Tekla.Structures.Internal.dotConnectionCode_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportSetConnectionCode(Tekla.Structures.Internal.dotConnectionCode_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportGetPluginIntAttributes(Tekla.Structures.Internal.dotPluginAttributesInt_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportGetPluginDoubleAttributes(Tekla.Structures.Internal.dotPluginAttributesDouble_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportGetPluginStringAttributes(Tekla.Structures.Internal.dotPluginAttributesString_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.DrawingExportAddPlugin(Tekla.Structures.Internal.dotPluginDefinition_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.DrawingExportGetPluginInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.DrawingExportSetPluginInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.DrawingExportCurrentDefineInputClientId(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.DrawingExportDefineInputCompleted(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.DrawingExportPluginRunCompleted(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportAddPlugin(Tekla.Structures.Internal.dotPluginDefinition_t@,Tekla.Structures.Internal.dotConnectionType_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportGetInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportSetInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.CDelegateWrapper.ExportSignalInputEnded">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.GenericDelegateFake`1">
+            <summary>
+            Implements ICDelegate so that every method returns according to <see cref="T:Tekla.Structures.RemotingHelper.IReturnStrategy"/>
+            Can be used in unit testing to mock Tekla Structures behavior, by setting
+            a ICDelegate instance using <see cref="T:Tekla.Structures.TeklaStructuresInternal.CDelegateSetter" />.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.DelegateFake">
+            <summary>
+            Implements ICDelegate so that every method throws NotImplementedException.
+            Can be used in unit testing to mock Tekla Structures behavior, by setting
+            a ICDelegate instance using <see cref="T:Tekla.Structures.TeklaStructuresInternal.CDelegateSetter" />.
+            </summary>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.DelegateProxy">
+            <summary>
+            CDelegate remote class proxy.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.DelegateProxy.#cctor">
+            <summary>
+            Initializes static instance variable.
+            </summary>
+        </member>
+        <member name="P:Tekla.Structures.PluginsInternal.DelegateProxy.Delegate">
+            <summary>
+            Gets the singleton CDelegate instance that includes model API methods.
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.DelegateProxy.DeactivateInterface(System.String)">
+            <summary>
+            Deactivate Tekla.Structures.Model interface
+            </summary>
+            <param name="Param"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.ICDelegate">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportGetPluginBaseDirectory(Tekla.Structures.Internal.dotPluginBaseDirectory_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportGetPluginName(Tekla.Structures.Internal.dotPluginName_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportGetPluginId">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportSetPluginResult(System.Int32)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportExecutePluginResult(System.Int32)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportGetConnectionCode(Tekla.Structures.Internal.dotConnectionCode_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportSetConnectionCode(Tekla.Structures.Internal.dotConnectionCode_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportGetPluginIntAttributes(Tekla.Structures.Internal.dotPluginAttributesInt_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportGetPluginDoubleAttributes(Tekla.Structures.Internal.dotPluginAttributesDouble_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportGetPluginStringAttributes(Tekla.Structures.Internal.dotPluginAttributesString_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.DrawingExportAddPlugin(Tekla.Structures.Internal.dotPluginDefinition_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.DrawingExportGetPluginInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.DrawingExportSetPluginInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.DrawingExportCurrentDefineInputClientId(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.DrawingExportDefineInputCompleted(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.DrawingExportPluginRunCompleted(Tekla.Structures.Internal.dotPluginClient_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportAddPlugin(Tekla.Structures.Internal.dotPluginDefinition_t@,Tekla.Structures.Internal.dotConnectionType_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportGetInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportSetInput(Tekla.Structures.Internal.dotPluginInput_t@)">
+            <exclude/>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.ICDelegate.ExportSignalInputEnded">
+            <exclude/>
+        </member>
+        <member name="T:Tekla.Structures.PluginsInternal.Remoter">
+            <summary>
+            Remoter class for plugins
+            </summary>
+        </member>
+        <member name="F:Tekla.Structures.PluginsInternal.Remoter.ChannelName">
+            <summary>
+            The channel name
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.Remoter.InitializeSandBox">
+            <summary>
+            Initializes the sand box.
+            </summary>
+            <returns>bool is initialezed</returns>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.Remoter.GetConnectionStatus">
+            <summary>
+            Initializes the connection to TS. Must be called before the first operation.
+            </summary>
+            <returns>returns connection status</returns>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.Remoter.DisposeService">
+            <summary>
+            Dispose Remoting services
+            </summary>
+        </member>
+        <member name="M:Tekla.Structures.PluginsInternal.Remoter.Dispose">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>
