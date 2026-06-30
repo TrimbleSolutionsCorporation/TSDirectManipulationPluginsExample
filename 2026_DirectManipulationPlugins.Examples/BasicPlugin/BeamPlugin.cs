@@ -55,7 +55,7 @@
         /// <summary>
         /// The default profile name.
         /// </summary>
-        public static readonly string DefaultProfileName = "HEA300";
+        public const string DefaultProfileName = "HEA300";
 
         /// <summary>
         /// The name of the plugin. This value is used in the attribute above as well as with the Direct Manipulation creation and manipulation features.
